@@ -1,5 +1,6 @@
 #include <ros/ros.h>
 #include <std_msgs/String.h>
+#include <geometry_msgs/WrenchStamped.h>
 //#include <AdmittanceControl.h>
 
 class AdmittanceSubscriberClass
@@ -15,9 +16,10 @@ public:
     }
 
     // Define the callback function
-    void callback(const std_msgs::String::ConstPtr& msg)
+    void callback(const geometry_msgs::WrenchStamped::ConstPtr& msg)
     {
-        ROS_INFO("Received message: %s", msg->data.c_str());
+        ROS_INFO("Received message: force.x = %f, force.y = %f, force.z = %f, torque.x = %f, torque.y = %f, torque.z = %f", msg->wrench.force.x, msg->wrench.force.y, msg->wrench.force.z, msg->wrench.torque.x, msg->wrench.torque.y, msg->wrench.torque.z);
+
     }
 
 private:
