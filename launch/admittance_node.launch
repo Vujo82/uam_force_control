@@ -1,0 +1,4 @@
+<!--Launch file just for admittance_node-->
+<launch>
+  <node name="admittance_node" pkg="uam_force_control" type="uam_force_control_node" output="screen"/>
+</launch>
