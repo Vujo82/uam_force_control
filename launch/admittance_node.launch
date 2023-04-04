@@ -1,4 +1,5 @@
 <!--Launch file just for admittance_node-->
 <launch>
   <node name="admittance_node" pkg="uam_force_control" type="uam_force_control_node" output="screen"/>
+  <!--<remap from="/red/ft_sensor" to="/admittance_node/red/ft_sensor"/>-->
 </launch>
