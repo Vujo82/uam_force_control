@@ -9,6 +9,8 @@
 #include <cmath>
 #include <trajectory_msgs/MultiDOFJointTrajectoryPoint.h>
 #include <trajectory_msgs/MultiDOFJointTrajectory.h>
+#include <deque>
+
 
 //#include <AdmittanceControl.h>
 
@@ -22,21 +24,115 @@ public:
         // Create a node handle
         nh_ = ros::NodeHandle();
 
-        // Subscribe to the topic
+        // Subscribe/publish to the topic
         force_sub_ = nh_.subscribe("red/ft_sensor", 1, &AdmittanceSubscriberClass::forceCallback, this);
         pose_sub_ = nh_.subscribe("/red/position_hold/trajectory", 1, &AdmittanceSubscriberClass::poseCallback, this);
         odom_sub_ = nh_.subscribe("red/odometry", 1, &AdmittanceSubscriberClass::odomCallback, this);
-        mod_trajectory_pub_ = nh_.advertise<trajectory_msgs::MultiDOFJointTrajectoryPoint>("/red/custom_pub", 10);
+        mod_trajectory_pub_ = nh_.advertise<trajectory_msgs::MultiDOFJointTrajectoryPoint>("/red/modified_trajectory", 10);
+        force_filter_pub_ = nh_.advertise<geometry_msgs::WrenchStamped>("/red/filtered_force", 10);
 
+        HISTORY_BUFFER_SIZE = 50;
     }
 
     // Callback functions
     void forceCallback(const geometry_msgs::WrenchStamped::ConstPtr& msg)
     {
-        //ROS_INFO("Received force message: force.x = %f, force.y = %f, force.z = %f, torque.x = %f, torque.y = %f, torque.z = %f", msg->wrench.force.x, msg->wrench.force.y, msg->wrench.force.z, msg->wrench.torque.x, msg->wrench.torque.y, msg->wrench.torque.z);
-        ROS_INFO("Received force message:");
+        //save data from the topic
+        ROS_INFO("Received force message");
+        double force_x = msg->wrench.force.x;
+        double force_y = msg->wrench.force.y;
+        double force_z = msg->wrench.force.z;
+        double torque_x = msg->wrench.torque.x;
+        double torque_y = msg->wrench.torque.y;
+        double torque_z = msg->wrench.torque.z;
+
+        //computing the median and mean 
+        double median_force_x = computeMedian(force_x, force_history_x_, HISTORY_BUFFER_SIZE);
+        double median_force_y = computeMedian(force_y, force_history_y_, HISTORY_BUFFER_SIZE);
+        double median_force_z = computeMedian(force_z, force_history_z_, HISTORY_BUFFER_SIZE);
+        double median_torque_x = computeMedian(torque_x, torque_history_x_, HISTORY_BUFFER_SIZE);
+        double median_torque_y = computeMedian(torque_y, torque_history_y_, HISTORY_BUFFER_SIZE);
+        double median_torque_z = computeMedian(torque_z, torque_history_z_, HISTORY_BUFFER_SIZE);
+
+        double filtered_force_x = computeMean(median_force_x, filt_force_history_x_, HISTORY_BUFFER_SIZE);
+        double filtered_force_y = computeMean(median_force_y, filt_force_history_y_, HISTORY_BUFFER_SIZE);
+        double filtered_force_z = computeMean(median_force_z, filt_force_history_z_, HISTORY_BUFFER_SIZE);
+        double filtered_torque_x = computeMean(median_torque_x, filt_torque_history_x_, HISTORY_BUFFER_SIZE);
+        double filtered_torque_y = computeMean(median_torque_y, filt_torque_history_y_, HISTORY_BUFFER_SIZE);
+        double filtered_torque_z = computeMean(median_torque_z, filt_torque_history_z_, HISTORY_BUFFER_SIZE);
+
+        geometry_msgs::WrenchStamped filtered_msg;
+        filtered_msg.wrench.force.x = filtered_force_x;
+        filtered_msg.wrench.force.y = filtered_force_y;
+        filtered_msg.wrench.force.z = filtered_force_z;
+        filtered_msg.wrench.torque.x = filtered_torque_x;
+        filtered_msg.wrench.torque.y = filtered_torque_y;
+        filtered_msg.wrench.torque.z = filtered_torque_z;
+        force_filter_pub_.publish(filtered_msg);
+
     }
 
+    double computeMedian(double data, std::deque<double>& history, int windowSize)
+    {
+        // adding data to the history
+        history.push_back(data);
+
+        // check if history size exceeds windowSize
+        if (history.size() > windowSize)
+        {
+            history.pop_front(); // remove oldest data if history size exceeds windowSize
+        }
+
+        // get history size
+        int size = history.size();
+
+        // computing the median of the history
+        std::deque<double> medianHistory = history; // create a copy of history for median filtering
+        std::sort(medianHistory.begin(), medianHistory.end()); // sort the median history
+        double median;
+        if (size % 2 == 0)
+        {
+            // If the size is even, average the middle two elements
+            int mid1 = size / 2 - 1;
+            int mid2 = size / 2;
+            median = (medianHistory[mid1] + medianHistory[mid2]) / 2.0;
+        }
+        else
+        {
+            // If the size is odd, return the middle element as the median
+            median = medianHistory[size / 2];
+        }
+
+        // return the median
+        return median;
+    }
+
+    double computeMean(double data, std::deque<double>& history, int windowSize)
+    {
+        // adding data to the history
+        history.push_back(data);
+
+        // check if history size exceeds windowSize
+        if (history.size() > windowSize)
+        {
+            history.pop_front(); // remove oldest data if history size exceeds windowSize
+        }
+
+        // get history size
+        int size = history.size();
+
+        // computing the mean of the history
+        double sum = 0;
+        for (int i = 0; i < size; i++)
+        {
+            sum += history[i];
+        }
+        double mean = sum / size;
+
+        return mean;
+    }
+    
+    //receiving data from /red/position_hold/trajectory and posting data*2 to /red/custom_pub topic
     void poseCallback(const trajectory_msgs::MultiDOFJointTrajectoryPoint::ConstPtr& msg)
     {
         //ROS_INFO("Received pose message linear_velocity_x=%f", msg->velocities[0].linear.x);
@@ -80,66 +176,28 @@ private:
     ros::Subscriber pose_sub_;
     ros::Subscriber odom_sub_;
     ros::Publisher mod_trajectory_pub_;
+    ros::Publisher force_filter_pub_;
+
+    //median history
+    std::deque<double> force_history_x_; // Declare a deque for storing force values
+    std::deque<double> force_history_y_;
+    std::deque<double> force_history_z_;
+
+    std::deque<double> torque_history_x_; // Declare a deque for storing torque values
+    std::deque<double> torque_history_y_;
+    std::deque<double> torque_history_z_;
+
+    //median+mean history
+    std::deque<double> filt_force_history_x_; // Declare a deque for storing force values
+    std::deque<double> filt_force_history_y_;
+    std::deque<double> filt_force_history_z_;
+
+    std::deque<double> filt_torque_history_x_; // Declare a deque for storing torque values
+    std::deque<double> filt_torque_history_y_;
+    std::deque<double> filt_torque_history_z_;
+
+    int HISTORY_BUFFER_SIZE; // Declare the size of the history buffer
 };
-
-
-//DroneController - klasa za racunanje dif funkcije sustava i racunanje modificirane trajektorije
-
-// class DroneController
-// {
-// public:
-//     DroneController(double M, double D, double K) : M_(M), D_(D), K_(K) {}
-    
-//     void setDesiredTrajectory(const trajectory_msgs::MultiDOFJointTrajectoryPoint& d) {
-//         d_ = d;
-//     }
-    
-//     void setExternalForces(const geometry_msgs::WrenchStamped& f) {
-//         f_ = f;
-//     }
-    
-//     trajectory_msgs::MultiDOFJointTrajectory getModifiedTrajectory(const trajectory_msgs::MultiDOFJointTrajectoryPoint& r0, double dt, double t_end) const {
-
-//         // Initialize modified trajectory with initial values
-//         trajectory_msgs::MultiDOFJointTrajectory r;
-//         r.points.push_back(r0);
-        
-//         // Compute number of time steps
-//         int n_steps = static_cast<int>(std::ceil(t_end / dt));
-        
-//         // Initialize vectors to store intermediate values
-//         std::vector<double> r_dot(n_steps), r_dot_dot(n_steps);
-        
-//         // Compute modified trajectory at each time step using numerical integration
-//         for (int i = 0; i < n_steps; ++i) {
-//             // Compute intermediate values
-//             double r_dot_dot_x = (f_.wrench.force.x - D_ * (r.points[i].velocities[0].linear.x - d_.velocities[0].linear.x) - K_ * (r.points[i].transforms[0].translation.x - d_.transforms[0].translation.x)) / M_;
-//             double r_dot_dot_y = (f_.wrench.force.y - D_ * (r.points[i].velocities[0].linear.y - d_.velocities[0].linear.y) - K_ * (r.points[i].transforms[0].translation.y - d_.transforms[0].translation.y)) / M_;
-//             double r_dot_dot_z = (f_.wrench.force.z - D_ * (r.points[i].velocities[0].linear.z - d_.velocities[0].linear.z) - K_ * (r.points[i].transforms[0].translation.z - d_.transforms[0].translation.z)) / M_;
-
-//             trajectory_msgs::MultiDOFJointTrajectoryPoint r_next;
-//             r_next.time_from_start = ros::Duration(dt * (i + 1));
-//             r_next.transforms.resize(1);
-//             r_next.transforms[0].translation.x = r.points[i].transforms[0].translation.x + r.points[i].velocities[0].linear.x * dt;
-//             r_next.transforms[0].translation.y = r.points[i].transforms[0].translation.y + r.points[i].velocities[0].linear.y * dt;
-//             r_next.transforms[0].translation.z = r.points[i].transforms[0].translation.z + r.points[i].velocities[0].linear.z * dt;
-//             r_next.velocities.resize(1);
-//             r_next.velocities[0].linear.x = r.points[i].velocities[0].linear.x + r_dot_dot_x * dt;
-//             r_next.velocities[0].linear.y = r.points[i].velocities[0].linear.y + r_dot_dot_y * dt;
-//             r_next.velocities[0].linear.z = r.points[i].velocities[0].linear.z + r_dot_dot_z * dt;
-
-//             r.points.push_back(r_next);
-//         }
-        
-//         return r;
-//     }
-    
-// private:
-//     double M_, D_, K_;
-//     trajectory_msgs::MultiDOFJointTrajectoryPoint d_;
-//     geometry_msgs::WrenchStamped f_;
-// };
-
 
 
 int main(int argc, char **argv)
@@ -148,7 +206,7 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "admittance_node");
 
     // Create an instance of the subscriber/publisher class
-    AdmittanceSubscriberClass my_subscriber; //mozda promijeniti ime instance klase al nije tolko vazno
+    AdmittanceSubscriberClass my_subscriber; 
 
     // Spin the node
     ros::spin();
