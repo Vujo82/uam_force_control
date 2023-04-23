@@ -14,7 +14,7 @@
 
 //#include <AdmittanceControl.h>
 
-//AdmittanceSubscriberClass - klasa za ocitavanje subscribera
+//AdmittanceSubscriberClass - klasa za pokretanje nodea za impedanciju/admitanciju
 
 class AdmittanceSubscriberClass
 {
@@ -28,7 +28,7 @@ public:
         force_sub_ = nh_.subscribe("red/ft_sensor", 1, &AdmittanceSubscriberClass::forceCallback, this);
         pose_sub_ = nh_.subscribe("/red/position_hold/trajectory", 1, &AdmittanceSubscriberClass::poseCallback, this);
         odom_sub_ = nh_.subscribe("red/odometry", 1, &AdmittanceSubscriberClass::odomCallback, this);
-        mod_trajectory_pub_ = nh_.advertise<trajectory_msgs::MultiDOFJointTrajectoryPoint>("/red/modified_trajectory", 10);
+        mod_trajectory_pub_ = nh_.advertise<trajectory_msgs::MultiDOFJointTrajectoryPoint>("/red/modified_trajectory", 10); 
         force_filter_pub_ = nh_.advertise<geometry_msgs::WrenchStamped>("/red/filtered_force", 10);
 
         HISTORY_BUFFER_SIZE = 50;
@@ -38,7 +38,8 @@ public:
     void forceCallback(const geometry_msgs::WrenchStamped::ConstPtr& msg)
     {
         //save data from the topic
-        ROS_INFO("Received force message");
+        //ROS_INFO("Received force message");
+        //mozda treba dodati i za header
         double force_x = msg->wrench.force.x;
         double force_y = msg->wrench.force.y;
         double force_z = msg->wrench.force.z;
@@ -61,7 +62,7 @@ public:
         double filtered_torque_y = computeMean(median_torque_y, filt_torque_history_y_, HISTORY_BUFFER_SIZE);
         double filtered_torque_z = computeMean(median_torque_z, filt_torque_history_z_, HISTORY_BUFFER_SIZE);
 
-        geometry_msgs::WrenchStamped filtered_msg;
+        //geometry_msgs::WrenchStamped filtered_msg;
         filtered_msg.wrench.force.x = filtered_force_x;
         filtered_msg.wrench.force.y = filtered_force_y;
         filtered_msg.wrench.force.z = filtered_force_z;
@@ -132,7 +133,7 @@ public:
         return mean;
     }
     
-    //receiving data from /red/position_hold/trajectory and posting data*2 to /red/custom_pub topic
+    //poseCallback -> doing the god's work
     void poseCallback(const trajectory_msgs::MultiDOFJointTrajectoryPoint::ConstPtr& msg)
     {
         //ROS_INFO("Received pose message linear_velocity_x=%f", msg->velocities[0].linear.x);
@@ -141,33 +142,78 @@ public:
         double x = msg->transforms[0].translation.x;
         double y = msg->transforms[0].translation.y;
         double z = msg->transforms[0].translation.z;
+
         double vx = msg->velocities[0].linear.x;
         double vy = msg->velocities[0].linear.y;
         double vz = msg->velocities[0].linear.z;
+        
+        double ax = msg->accelerations[0].linear.x;
+        double ay = msg->accelerations[0].linear.y;
+        double az = msg->accelerations[0].linear.z;
+
+        //just casting
+        double xc = filtered_msg.wrench.force.x/K;
+        double yc = filtered_msg.wrench.force.y/K;
+        double zc = filtered_msg.wrench.force.z/K;
+
+        double vxc = filtered_msg.wrench.force.x/D;
+        double vyc = filtered_msg.wrench.force.x/D;
+        double vzc = filtered_msg.wrench.force.z/D;
+
+        // double axc = filtered_msg.wrench.force.x/M;
+        // double ayc = filtered_msg.wrench.force.y/M;
+        // double azc = filtered_msg.wrench.force.z/M;
 
         // Print the extracted data
-        ROS_INFO("Time from start: %.2f", time_from_start);
-        ROS_INFO("Position: x=%.2f, y=%.2f, z=%.2f", x, y, z);
-        ROS_INFO("Linear velocity: vx=%.2f, vy=%.2f, vz=%.2f", vx, vy, vz);
+        // ROS_INFO("Time from start: %.2f", time_from_start);
+        // ROS_INFO("Position: x=%.2f, y=%.2f, z=%.2f", x, y, z);
+        // ROS_INFO("Linear velocity: vx=%.2f, vy=%.2f, vz=%.2f", vx, vy, vz);
 
         // Publish the extracted data on a new topic
         trajectory_msgs::MultiDOFJointTrajectoryPoint output_msg;
+        
         output_msg.time_from_start = ros::Duration(time_from_start);
         output_msg.transforms.resize(1);
         output_msg.velocities.resize(1);
-        output_msg.transforms[0].translation.x = x * 2;  // Modifying the data before publishing
-        output_msg.transforms[0].translation.y = y * 2;
-        output_msg.transforms[0].translation.z = z * 2;
-        output_msg.velocities[0].linear.x = vx * 2;
-        output_msg.velocities[0].linear.y = vy * 2;
-        output_msg.velocities[0].linear.z = vz * 2;
-        mod_trajectory_pub_.publish(output_msg);
+
+        if(filtered_msg.wrench.force.x > 5 || filtered_msg.wrench.force.x < -5 || filtered_msg.wrench.force.y > 5 || filtered_msg.wrench.force.y < -5)
+        {
+
+        ROS_INFO("----- ocitala se sila veca od 5N u smjeru x/y -----");
+        // Modifying the data before publishing
+        output_msg.transforms[0].translation.x = xc + x;  
+        output_msg.transforms[0].translation.y = yc + y;
+        output_msg.transforms[0].translation.z = zc + z;
+
+        output_msg.velocities[0].linear.x = vxc + vx;
+        output_msg.velocities[0].linear.y = vyc + vy;
+        output_msg.velocities[0].linear.z = vzc + vz;
+
+        // output_msg.accelerations[0].linear.x = axc + ax;
+        // output_msg.accelerations[0].linear.y = ayc + ay;
+        // output_msg.accelerations[0].linear.z = azc + az;
+        }
+        else{
+        output_msg.transforms[0].translation.x = x;
+        output_msg.transforms[0].translation.y = y;
+        output_msg.transforms[0].translation.z = z;  
+
+        // output_msg.velocities[0].linear.x = vx;
+        // output_msg.velocities[0].linear.y = vy;
+        // output_msg.velocities[0].linear.z = vz;
+
+        // output_msg.accelerations[0].linear.x = ax;
+        // output_msg.accelerations[0].linear.y = ay;
+        // output_msg.accelerations[0].linear.z = az;
+        }
+
+        mod_trajectory_pub_.publish(output_msg); //publishing modified message
     }
 
     void odomCallback(const nav_msgs::Odometry::ConstPtr& msg)
     {
         //ROS_INFO("Received odometry message: x=%f, y=%f, z=%f", msg->pose.pose.position.x, msg->pose.pose.position.y, msg->pose.pose.position.z);
-        ROS_INFO("Received odometry message");
+        //ROS_INFO("Received odometry message");
     }
 
 private:
@@ -197,8 +243,13 @@ private:
     std::deque<double> filt_torque_history_z_;
 
     int HISTORY_BUFFER_SIZE; // Declare the size of the history buffer
-};
 
+    geometry_msgs::WrenchStamped filtered_msg; //Declare filtered force acting upon body
+    double K = 40; //stiffness coefficient
+    double M = 40; //inertia coefficient
+    double D = 40; //damping coefficient
+
+};
 
 int main(int argc, char **argv)
 {
