@@ -1,14 +1,23 @@
 # UAM_FORCE_CONTROL
 - ros package containing admittance node
 
-## Simulation Startup
+## Docker container startup 
 
 docker start -i uav_ros_simulation_focal
 
+## Usage
+
 ### Terminator
 
+- access a running docker container and start an interactive bash session inside it in each terminal window
+
 ````bash
-# 1st terminal
+docker exec -it uav_ros_simulation_focal bash
+````
+
+
+````bash
+# 1st terminal - simulation Startup
 bash start.sh
 
 # 2nd terminal - starting the force control node
@@ -17,7 +26,7 @@ cd uav_ws/src/uam_force_control/launch
 roslaunch admittance_node.launch
 
 # 3rd terminal - starting the plotjuggler
-roslaunch ardupilot_gazebo mavros.launch
+rosrun plotjuggler plotjuggler
 
 #4th terminal - publish position on red/tracker/input_pose
 rostopic pub /red/tracker/input_pose geometry_msgs/PoseStamped "header:
@@ -47,3 +56,20 @@ pose:
 *D* - damping coefficient
 
 *HISTORY_BUFFER_SIZE* - median/mean kernel size
+
+## Apply changes
+
+- position yourself in uav_ws
+````bash
+cd 
+cd uav_ws
+````
+- run a catkin build
+````bash
+catkin build
+````
+- after successful run
+````bash
+source devel/setup.bash
+````
+
