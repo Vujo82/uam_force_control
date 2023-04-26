@@ -3,7 +3,6 @@
 #include <geometry_msgs/WrenchStamped.h>
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/PoseStamped.h>
-
 #include <iostream>
 #include <vector>
 #include <cmath>
@@ -19,6 +18,10 @@
 class AdmittanceSubscriberClass
 {
 public:
+
+    bool pose_received;
+    bool force_received;
+
     AdmittanceSubscriberClass()
     {
         // Create a node handle
@@ -26,13 +29,18 @@ public:
 
         // Subscribe/publish to the topic
         force_sub_ = nh_.subscribe("red/ft_sensor", 1, &AdmittanceSubscriberClass::forceCallback, this);
-        pose_sub_ = nh_.subscribe("/red/position_hold/trajectory", 1, &AdmittanceSubscriberClass::poseCallback, this);
+        pose_sub_ = nh_.subscribe("/red/mavros/global_position/local", 1, &AdmittanceSubscriberClass::poseCallback, this);
         odom_sub_ = nh_.subscribe("red/odometry", 1, &AdmittanceSubscriberClass::odomCallback, this);
-        mod_trajectory_pub_ = nh_.advertise<trajectory_msgs::MultiDOFJointTrajectoryPoint>("/red/modified_trajectory", 10); 
+        mod_trajectory_pub_ = nh_.advertise<nav_msgs::Odometry>("/red/modified_trajectory", 10); 
         force_filter_pub_ = nh_.advertise<geometry_msgs::WrenchStamped>("/red/filtered_force", 10);
 
-        HISTORY_BUFFER_SIZE = 50;
+        HISTORY_BUFFER_SIZE = 40;
+
+        pose_received = false;
+        force_received = false;
+
     }
+
 
     // Callback functions
     void forceCallback(const geometry_msgs::WrenchStamped::ConstPtr& msg)
@@ -70,6 +78,7 @@ public:
         filtered_msg.wrench.torque.y = filtered_torque_y;
         filtered_msg.wrench.torque.z = filtered_torque_z;
         force_filter_pub_.publish(filtered_msg);
+        force_received = true;
 
     }
 
@@ -134,86 +143,67 @@ public:
     }
     
     //poseCallback -> doing the god's work
-    void poseCallback(const trajectory_msgs::MultiDOFJointTrajectoryPoint::ConstPtr& msg)
+    void poseCallback(const nav_msgs::Odometry::ConstPtr& msg)
     {
-        //ROS_INFO("Received pose message linear_velocity_x=%f", msg->velocities[0].linear.x);
-        // Extract data from the received message
-        double time_from_start = msg->time_from_start.toSec();
-        double x = msg->transforms[0].translation.x;
-        double y = msg->transforms[0].translation.y;
-        double z = msg->transforms[0].translation.z;
+        // Save data from the received message
+        poseCbMsg = *msg;
+        pose_received = true;
 
-        double vx = msg->velocities[0].linear.x;
-        double vy = msg->velocities[0].linear.y;
-        double vz = msg->velocities[0].linear.z;
-        
-        double ax = msg->accelerations[0].linear.x;
-        double ay = msg->accelerations[0].linear.y;
-        double az = msg->accelerations[0].linear.z;
-
-        //just casting
-        double xc = filtered_msg.wrench.force.x/K;
-        double yc = filtered_msg.wrench.force.y/K;
-        double zc = filtered_msg.wrench.force.z/K;
-
-        double vxc = filtered_msg.wrench.force.x/D;
-        double vyc = filtered_msg.wrench.force.x/D;
-        double vzc = filtered_msg.wrench.force.z/D;
-
-        // double axc = filtered_msg.wrench.force.x/M;
-        // double ayc = filtered_msg.wrench.force.y/M;
-        // double azc = filtered_msg.wrench.force.z/M;
-
-        // Print the extracted data
-        // ROS_INFO("Time from start: %.2f", time_from_start);
-        // ROS_INFO("Position: x=%.2f, y=%.2f, z=%.2f", x, y, z);
-        // ROS_INFO("Linear velocity: vx=%.2f, vy=%.2f, vz=%.2f", vx, vy, vz);
-
-        // Publish the extracted data on a new topic
-        trajectory_msgs::MultiDOFJointTrajectoryPoint output_msg;
-        
-        output_msg.time_from_start = ros::Duration(time_from_start);
-        output_msg.transforms.resize(1);
-        output_msg.velocities.resize(1);
-
-        if(filtered_msg.wrench.force.x > 5 || filtered_msg.wrench.force.x < -5 || filtered_msg.wrench.force.y > 5 || filtered_msg.wrench.force.y < -5)
-        {
-
-        ROS_INFO("----- ocitala se sila veca od 5N u smjeru x/y -----");
-        // Modifying the data before publishing
-        output_msg.transforms[0].translation.x = xc + x;  
-        output_msg.transforms[0].translation.y = yc + y;
-        output_msg.transforms[0].translation.z = zc + z;
-
-        output_msg.velocities[0].linear.x = vxc + vx;
-        output_msg.velocities[0].linear.y = vyc + vy;
-        output_msg.velocities[0].linear.z = vzc + vz;
-
-        // output_msg.accelerations[0].linear.x = axc + ax;
-        // output_msg.accelerations[0].linear.y = ayc + ay;
-        // output_msg.accelerations[0].linear.z = azc + az;
-        }
-        else{
-        output_msg.transforms[0].translation.x = x;
-        output_msg.transforms[0].translation.y = y;
-        output_msg.transforms[0].translation.z = z;  
-
-        // output_msg.velocities[0].linear.x = vx;
-        // output_msg.velocities[0].linear.y = vy;
-        // output_msg.velocities[0].linear.z = vz;
-
-        // output_msg.accelerations[0].linear.x = ax;
-        // output_msg.accelerations[0].linear.y = ay;
-        // output_msg.accelerations[0].linear.z = az;
-        }
-
-        mod_trajectory_pub_.publish(output_msg); //publishing modified message
     }
 
     void odomCallback(const nav_msgs::Odometry::ConstPtr& msg)
     {
         //ROS_INFO("Received odometry message: x=%f, y=%f, z=%f", msg->pose.pose.position.x, msg->pose.pose.position.y, msg->pose.pose.position.z);
         //ROS_INFO("Received odometry message");
+    }
+
+    void run()
+    {
+        ROS_INFO("running");
+        nav_msgs::Odometry output_msg;
+
+        //double time_from_start = poseCbMsg.time_from_start.toSec();
+        double x = poseCbMsg.pose.pose.position.x;
+        double y = poseCbMsg.pose.pose.position.y;
+        double z = poseCbMsg.pose.pose.position.z;
+
+        // double vx = poseCbMsg.velocities[0].linear.x;
+        // double vy = poseCbMsg.velocities[0].linear.y;
+        // double vz = poseCbMsg.velocities[0].linear.z;
+        
+        // double ax = poseCbMsg.accelerations[0].linear.x;
+        // double ay = poseCbMsg.accelerations[0].linear.y;
+        // double az = poseCbMsg.accelerations[0].linear.z;
+
+        //just casting
+        double xc = filtered_msg.wrench.force.x/K;
+        double yc = filtered_msg.wrench.force.y/K;
+        double zc = filtered_msg.wrench.force.z/K;
+
+        // output_msg.time_from_start = ros::Duration(time_from_start);
+        // output_msg.transforms.resize(1);
+        // output_msg.velocities.resize(1);
+
+        if(filtered_msg.wrench.force.x > 5 || filtered_msg.wrench.force.x < -5 || filtered_msg.wrench.force.y > 5 || filtered_msg.wrench.force.y < -5)
+        {
+        ROS_INFO("----- ocitala se sila veca od 5N u smjeru x/y -----");
+
+        // Modifying the data before publishing
+        output_msg.pose.pose.position.x = xc + x;  
+        output_msg.pose.pose.position.y = yc + y;
+        output_msg.pose.pose.position.z = zc + z;
+        }
+
+        else
+        {
+        output_msg.pose.pose.position.x = x;
+        output_msg.pose.pose.position.y = y;
+        output_msg.pose.pose.position.z = z;
+        }
+
+        mod_trajectory_pub_.publish(output_msg); //publishing modified message
+        pose_received = false;
+        force_received = false;
     }
 
 private:
@@ -245,7 +235,9 @@ private:
     int HISTORY_BUFFER_SIZE; // Declare the size of the history buffer
 
     geometry_msgs::WrenchStamped filtered_msg; //Declare filtered force acting upon body
-    double K = 40; //stiffness coefficient
+    nav_msgs::Odometry poseCbMsg; //Declare msg received from poseCb
+
+    double K = 100; //stiffness coefficient
     double M = 40; //inertia coefficient
     double D = 40; //damping coefficient
 
@@ -257,10 +249,22 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "admittance_node");
 
     // Create an instance of the subscriber/publisher class
-    AdmittanceSubscriberClass my_subscriber; 
+    AdmittanceSubscriberClass my_subscriber;
+
+    ros::Rate rate(10);
+
+    while(ros::ok()){
+        if(my_subscriber.pose_received && my_subscriber.force_received){
+        my_subscriber.run();
+        }
+        ros::spinOnce();
+        //rate.sleep();
+    }
+
+    ros::shutdown(); 
 
     // Spin the node
-    ros::spin();
+    //ros::spin();
 
     return 0;
 }
