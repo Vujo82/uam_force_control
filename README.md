@@ -13,7 +13,6 @@ xhost +
 docker start -i uav_ros_simulation_focal
 ````
 
-
 ## Usage
 
 ### Terminator
@@ -26,7 +25,7 @@ docker exec -it uav_ros_simulation_focal bash
 
 
 ````bash
-# 1st terminal - simulation Startup
+# 1st terminal - simulation startup
 bash start.sh
 
 # 2nd terminal - starting the force control node
