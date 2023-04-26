@@ -3,7 +3,16 @@
 
 ## Docker container startup 
 
+- before starting a docker container run following command -  command opens up the server to connections from any remote machine (X server is responsible for managing the graphical display) - without this you won't be able to see Gazebo simulation
+
+````bash
+xhost +
+````
+- start the docker container
+````bash
 docker start -i uav_ros_simulation_focal
+````
+
 
 ## Usage
 
