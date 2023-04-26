@@ -76,7 +76,7 @@ cd uav_ws
 ````bash
 catkin build
 ````
-- after successful run
+- after successful build
 ````bash
 source devel/setup.bash
 ````
