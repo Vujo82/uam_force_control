@@ -40,10 +40,10 @@ pose:
 
 - edit simulation parameters - [AdmittanceControl.cpp](https://github.com/Vujo82/uam_force_control/blob/master/src/AdmittanceControl.cpp)
 
-K - stiffness coefficient
+*K* - stiffness coefficient
 
-M - inertia coefficient
+*M* - inertia coefficient
 
-D - damping coefficient
+*D* - damping coefficient
 
-HISTORY_BUFFER_SIZE - median/mean kernel size
+*HISTORY_BUFFER_SIZE* - median/mean kernel size
