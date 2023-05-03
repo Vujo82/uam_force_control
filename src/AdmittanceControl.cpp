@@ -31,7 +31,8 @@ public:
         force_sub_ = nh_.subscribe("red/ft_sensor", 1, &AdmittanceSubscriberClass::forceCallback, this);
         pose_sub_ = nh_.subscribe("/red/mavros/global_position/local", 1, &AdmittanceSubscriberClass::poseCallback, this);
         odom_sub_ = nh_.subscribe("red/odometry", 1, &AdmittanceSubscriberClass::odomCallback, this);
-        mod_trajectory_pub_ = nh_.advertise<nav_msgs::Odometry>("/red/modified_trajectory", 10); 
+        mod_trajectory_pub_ = nh_.advertise<geometry_msgs::PoseStamped>("/red/tracker/input_pose", 10);
+        //mod_trajectory_pub_ = nh_.advertise<nav_msgs::Odometry>("/red/modified_trajectory", 10); 
         force_filter_pub_ = nh_.advertise<geometry_msgs::WrenchStamped>("/red/filtered_force", 10);
 
         HISTORY_BUFFER_SIZE = 40;
@@ -160,7 +161,8 @@ public:
     void run()
     {
         ROS_INFO("running");
-        nav_msgs::Odometry output_msg;
+        geometry_msgs::PoseStamped output_msg;
+        //nav_msgs::Odometry output_msg;
 
         //double time_from_start = poseCbMsg.time_from_start.toSec();
         double x = poseCbMsg.pose.pose.position.x;
@@ -189,19 +191,29 @@ public:
         ROS_INFO("----- ocitala se sila veca od 5N u smjeru x/y -----");
 
         // Modifying the data before publishing
-        output_msg.pose.pose.position.x = xc + x;  
-        output_msg.pose.pose.position.y = yc + y;
-        output_msg.pose.pose.position.z = zc + z;
+        output_msg.pose.position.x = xc + x;  
+        output_msg.pose.position.y = yc + y;
+        output_msg.pose.position.z = zc + z;
+
+        // output_msg.pose.pose.position.x = xc + x;  
+        // output_msg.pose.pose.position.y = yc + y;
+        // output_msg.pose.pose.position.z = zc + z;
+
+        mod_trajectory_pub_.publish(output_msg); //publishing modified message
         }
 
         else
         {
-        output_msg.pose.pose.position.x = x;
-        output_msg.pose.pose.position.y = y;
-        output_msg.pose.pose.position.z = z;
-        }
+        // output_msg.pose.pose.position.x = x;
+        // output_msg.pose.pose.position.y = y;
+        // output_msg.pose.pose.position.z = z;
 
-        mod_trajectory_pub_.publish(output_msg); //publishing modified message
+        output_msg.pose.position.x = x;
+        output_msg.pose.position.y = y;
+        output_msg.pose.position.z = z;
+        }
+        
+        //mod_trajectory_pub_.publish(output_msg); //publishing modified message
         pose_received = false;
         force_received = false;
     }
@@ -237,7 +249,7 @@ private:
     geometry_msgs::WrenchStamped filtered_msg; //Declare filtered force acting upon body
     nav_msgs::Odometry poseCbMsg; //Declare msg received from poseCb
 
-    double K = 100; //stiffness coefficient
+    double K = 10; //stiffness coefficient
     double M = 40; //inertia coefficient
     double D = 40; //damping coefficient
 
