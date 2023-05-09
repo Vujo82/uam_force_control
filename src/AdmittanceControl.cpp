@@ -9,6 +9,10 @@
 #include <trajectory_msgs/MultiDOFJointTrajectoryPoint.h>
 #include <trajectory_msgs/MultiDOFJointTrajectory.h>
 #include <deque>
+#include <mutex>
+#include <eigen3/Eigen/Eigen>
+//include <Eigen/Dense>
+
 
 
 //#include <AdmittanceControl.h>
@@ -27,19 +31,28 @@ public:
         // Create a node handle
         nh_ = ros::NodeHandle();
 
-        // Subscribe/publish to the topic
+        // Subscribe/publish to the topicmod_trajectory_pub_
         force_sub_ = nh_.subscribe("red/ft_sensor", 1, &AdmittanceSubscriberClass::forceCallback, this);
         pose_sub_ = nh_.subscribe("/red/mavros/global_position/local", 1, &AdmittanceSubscriberClass::poseCallback, this);
         odom_sub_ = nh_.subscribe("red/odometry", 1, &AdmittanceSubscriberClass::odomCallback, this);
-        mod_trajectory_pub_ = nh_.advertise<geometry_msgs::PoseStamped>("/red/tracker/input_pose", 10);
+        mod_trajectory_pub_= nh_.advertise<geometry_msgs::PoseStamped>("/red/tracker/input_pose", 10);
         //mod_trajectory_pub_ = nh_.advertise<nav_msgs::Odometry>("/red/modified_trajectory", 10); 
         force_filter_pub_ = nh_.advertise<geometry_msgs::WrenchStamped>("/red/filtered_force", 10);
+        xc_yc_pub_ = nh_.advertise<geometry_msgs::WrenchStamped>("/red/xc_yc", 10);
 
         HISTORY_BUFFER_SIZE = 40;
 
         pose_received = false;
         force_received = false;
 
+        Tws_ << 0, 1, 0, 0,
+                -1, 0, 0, 0,
+                0, 0, 1, 0,
+                0, 0, 0, 1;
+
+        Tws_inv_ = Tws_.inverse();
+
+        
     }
 
 
@@ -158,10 +171,22 @@ public:
         //ROS_INFO("Received odometry message");
     }
 
+    void updatePose(const geometry_msgs::PoseStamped& pose) {
+        std::lock_guard<std::mutex> lock(output_msg_mutex);
+        m_output_msg = pose;
+    }
+
+    void publish() {
+        std::lock_guard<std::mutex> lock(output_msg_mutex);
+        mod_trajectory_pub_.publish(m_output_msg);
+    }
+
     void run()
     {
         ROS_INFO("running");
         geometry_msgs::PoseStamped output_msg;
+        geometry_msgs::WrenchStamped xc_yc_msg;
+
         //nav_msgs::Odometry output_msg;
 
         //double time_from_start = poseCbMsg.time_from_start.toSec();
@@ -182,6 +207,24 @@ public:
         double yc = filtered_msg.wrench.force.y/K;
         double zc = filtered_msg.wrench.force.z/K;
 
+        //FORCE TRANSFORM WORLD->SENSOR FRAME
+
+        //making a force vector
+        Eigen::Vector4d force_vector;
+        force_vector << xc, yc, zc, 0;
+        //multiplying the force vector with invers of a transformational matrix
+        Eigen::Vector4d force_vector_transform = Tws_inv_* force_vector;
+        //transforming the vector back to geometry_msgs::WrenchStamped
+        double xct = force_vector_transform(0);
+        double yct = force_vector_transform(1);  
+        double zct = force_vector_transform(2);      
+
+        //test publisher publishing
+        xc_yc_msg.wrench.force.x = xct;
+        xc_yc_msg.wrench.force.y = yct;
+        xc_yc_msg.wrench.force.z = zct;
+        xc_yc_pub_.publish(xc_yc_msg);
+
         // output_msg.time_from_start = ros::Duration(time_from_start);
         // output_msg.transforms.resize(1);
         // output_msg.velocities.resize(1);
@@ -191,15 +234,17 @@ public:
         ROS_INFO("----- ocitala se sila veca od 5N u smjeru x/y -----");
 
         // Modifying the data before publishing
-        output_msg.pose.position.x = xc + x;  
-        output_msg.pose.position.y = yc + y;
-        output_msg.pose.position.z = zc + z;
+        output_msg.pose.position.x = xct + x;  
+        output_msg.pose.position.y = yct + y;
+        output_msg.pose.position.z = zct + z;
+        updatePose(output_msg);
 
         // output_msg.pose.pose.position.x = xc + x;  
         // output_msg.pose.pose.position.y = yc + y;
         // output_msg.pose.pose.position.z = zc + z;
 
-        mod_trajectory_pub_.publish(output_msg); //publishing modified message
+        //mod_trajectory_pub_.publish(output_msg); //publishing modified message
+        publish();
         }
 
         else
@@ -225,6 +270,7 @@ private:
     ros::Subscriber odom_sub_;
     ros::Publisher mod_trajectory_pub_;
     ros::Publisher force_filter_pub_;
+    ros::Publisher xc_yc_pub_;
 
     //median history
     std::deque<double> force_history_x_; // Declare a deque for storing force values
@@ -249,9 +295,15 @@ private:
     geometry_msgs::WrenchStamped filtered_msg; //Declare filtered force acting upon body
     nav_msgs::Odometry poseCbMsg; //Declare msg received from poseCb
 
-    double K = 10; //stiffness coefficient
+    double K = 30; //stiffness coefficient
     double M = 40; //inertia coefficient
     double D = 40; //damping coefficient
+
+    geometry_msgs::PoseStamped m_output_msg;
+    mutable std::mutex output_msg_mutex;
+
+    Eigen::Matrix4d Tws_;
+    Eigen::Matrix4d Tws_inv_;
 
 };
 
