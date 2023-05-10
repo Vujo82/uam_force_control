@@ -11,6 +11,7 @@
 #include <deque>
 #include <mutex>
 #include <eigen3/Eigen/Eigen>
+//include <Eigen/Geometry>
 //include <Eigen/Dense>
 
 
@@ -181,26 +182,43 @@ public:
         mod_trajectory_pub_.publish(m_output_msg);
     }
 
+    Eigen::Matrix3d quaternionToRotation(const Eigen::Quaterniond& q) {
+        Eigen::Matrix3d rotMat = q.toRotationMatrix();
+        return rotMat;
+    }
+
     void run()
     {
         ROS_INFO("running");
         geometry_msgs::PoseStamped output_msg;
         geometry_msgs::WrenchStamped xc_yc_msg;
 
-        //nav_msgs::Odometry output_msg;
-
-        //double time_from_start = poseCbMsg.time_from_start.toSec();
+        //get the information from mavros/global_position/local
         double x = poseCbMsg.pose.pose.position.x;
         double y = poseCbMsg.pose.pose.position.y;
         double z = poseCbMsg.pose.pose.position.z;
+        double qx = poseCbMsg.pose.pose.orientation.x;
+        double qy = poseCbMsg.pose.pose.orientation.y;
+        double qz = poseCbMsg.pose.pose.orientation.z;
+        double qw = poseCbMsg.pose.pose.orientation.w;
 
-        // double vx = poseCbMsg.velocities[0].linear.x;
-        // double vy = poseCbMsg.velocities[0].linear.y;
-        // double vz = poseCbMsg.velocities[0].linear.z;
-        
-        // double ax = poseCbMsg.accelerations[0].linear.x;
-        // double ay = poseCbMsg.accelerations[0].linear.y;
-        // double az = poseCbMsg.accelerations[0].linear.z;
+        Eigen::Quaterniond quat(qx, qy, qz, qw);
+        Eigen::Matrix3d rotMat = quaternionToRotation(quat);
+        Eigen::Matrix4d tranMat;
+        Eigen::Matrix4d tranMat_inv;
+        tranMat.block<3, 3>(0, 0) = rotMat;
+        tranMat.row(0)[3] = x;
+        tranMat.row(1)[3] = y;
+        tranMat.row(2)[3] = z;
+        tranMat.row(3)[3] = 1;
+        tranMat.row(3)[0] = 0;
+        tranMat.row(3)[1] = 0;
+        tranMat.row(3)[2] = 0;
+
+        Eigen::IOFormat matrixFormat(Eigen::FullPrecision, 0, ", ", ";\n", "[", "]", "[", "]");
+        ROS_INFO_STREAM("transformational matrix: \n" << tranMat.format(matrixFormat));
+
+        tranMat_inv = tranMat.inverse();
 
         //just casting
         double xc = filtered_msg.wrench.force.x/K;
@@ -209,11 +227,11 @@ public:
 
         //FORCE TRANSFORM WORLD->SENSOR FRAME
 
-        //making a force vector
+        //make a force vector
         Eigen::Vector4d force_vector;
         force_vector << xc, yc, zc, 0;
         //multiplying the force vector with invers of a transformational matrix
-        Eigen::Vector4d force_vector_transform = Tws_inv_* force_vector;
+        Eigen::Vector4d force_vector_transform = tranMat_inv * force_vector;
         //transforming the vector back to geometry_msgs::WrenchStamped
         double xct = force_vector_transform(0);
         double yct = force_vector_transform(1);  
@@ -234,25 +252,20 @@ public:
         ROS_INFO("----- ocitala se sila veca od 5N u smjeru x/y -----");
 
         // Modifying the data before publishing
-        output_msg.pose.position.x = xct + x;  
-        output_msg.pose.position.y = yct + y;
-        output_msg.pose.position.z = zct + z;
+        output_msg.pose.position.x = xct;  
+        output_msg.pose.position.y = yct;
+        output_msg.pose.position.z = zct;
+        // output_msg.pose.position.x = xct + x;  
+        // output_msg.pose.position.y = yct + y;
+        // output_msg.pose.position.z = zct + z;
         updatePose(output_msg);
 
-        // output_msg.pose.pose.position.x = xc + x;  
-        // output_msg.pose.pose.position.y = yc + y;
-        // output_msg.pose.pose.position.z = zc + z;
-
         //mod_trajectory_pub_.publish(output_msg); //publishing modified message
+
         publish();
         }
 
-        else
-        {
-        // output_msg.pose.pose.position.x = x;
-        // output_msg.pose.pose.position.y = y;
-        // output_msg.pose.pose.position.z = z;
-
+        else{
         output_msg.pose.position.x = x;
         output_msg.pose.position.y = y;
         output_msg.pose.position.z = z;
