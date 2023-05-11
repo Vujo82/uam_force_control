@@ -11,6 +11,8 @@
 #include <deque>
 #include <mutex>
 #include <eigen3/Eigen/Eigen>
+#include <dynamic_reconfigure/server.h>
+#include </root/uav_ws/src/uam_force_control/cfg/cpp/uam_force_control/parametersConfig.h>
 //include <Eigen/Geometry>
 //include <Eigen/Dense>
 
@@ -52,6 +54,9 @@ public:
                 0, 0, 0, 1;
 
         Tws_inv_ = Tws_.inverse();
+
+        server.setCallback(boost::bind(&AdmittanceSubscriberClass::callback, this, _1, _2));
+
 
         
     }
@@ -187,6 +192,12 @@ public:
         return rotMat;
     }
 
+    void callback(uam_force_control::parametersConfig& config, uint32_t level)
+    {
+        K = config.stiffness;
+        ROS_INFO("Stiffness changed to: %f", K);
+    }
+
     void run()
     {
         ROS_INFO("running");
@@ -318,7 +329,10 @@ private:
     Eigen::Matrix4d Tws_;
     Eigen::Matrix4d Tws_inv_;
 
+    dynamic_reconfigure::Server<uam_force_control::parametersConfig> server;
+
 };
+
 
 int main(int argc, char **argv)
 {

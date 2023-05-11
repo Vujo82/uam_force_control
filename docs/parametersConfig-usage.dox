@@ -1,0 +1,7 @@
+\subsubsection usage Usage
+\verbatim
+<node name="uam_force_control" pkg="uam_force_control" type="uam_force_control">
+  <param name="stiffness" type="double" value="30.0" />
+</node>
+\endverbatim
+

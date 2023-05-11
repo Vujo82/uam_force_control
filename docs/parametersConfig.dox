@@ -1,0 +1,6 @@
+\subsubsection parameters ROS parameters
+
+Reads and maintains the following parameters on the ROS server
+
+- \b "~stiffness" : \b [double] Stiffness coeficient min: 1.0, default: 30.0, max: 100.0
+

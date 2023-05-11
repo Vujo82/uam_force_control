@@ -3,8 +3,12 @@
         {
             "name": "Linux",
             "includePath": [
-                "${workspaceFolder}/**", 
-                "/opt/ros/noetic/include/**"
+                "${workspaceFolder}/**",
+                "/opt/ros/noetic/include/**",
+                "/usr/include/eigen3",
+                "/root/uav_ws/src/uam_force_control/cfg/cpp/uam_force_control",
+                "${workspaceFolder}/cfg/cpp",
+                "/root/uav_ws/src"
             ],
             "defines": [],
             "compilerPath": "/usr/lib/ccache/gcc",
