@@ -36,7 +36,7 @@ public:
 
         // Subscribe/publish to the topicmod_trajectory_pub_
         force_sub_ = nh_.subscribe("/optoforce_node/OptoForceWrench", 1, &AdmittanceSubscriberClass::forceCallback, this);
-        pose_sub_ = nh_.subscribe("/red/mavros/global_position/local", 1, &AdmittanceSubscriberClass::poseCallback, this);
+        pose_sub_ = nh_.subscribe("/duck_purple/vrpn_client/estimated_odometry", 1, &AdmittanceSubscriberClass::poseCallback, this);
         odom_sub_ = nh_.subscribe("red/odometry", 1, &AdmittanceSubscriberClass::odomCallback, this);
         mod_trajectory_pub_= nh_.advertise<geometry_msgs::PoseStamped>("/red/tracker/input_pose", 10);
         filtered_sub = nh_.subscribe("/red/filtered_force", 1, &AdmittanceSubscriberClass::filtForceCb, this);
@@ -51,9 +51,9 @@ public:
         force_received = false;
 
         //trans matrix sensor->body
-        Tws_ << 0, 0, 1, 0,
-                0, -1, 0, 0,
-                1, 0, 0, 0,
+        Tws_ << 0, 0, -1, 0,
+                0, 1, 0, 0,
+                -1, 0, 0, 0,
                 0, 0, 0, 1;
 
         Tws_inv_ = Tws_.inverse();
@@ -261,7 +261,7 @@ public:
         double qz = poseCbMsg.pose.pose.orientation.z;
         double qw = poseCbMsg.pose.pose.orientation.w;
 
-        Eigen::Quaterniond quat(qx, qy, qz, qw);
+        Eigen::Quaterniond quat(qw, qx, qy, qz);
         Eigen::Matrix3d rotMat = quaternionToRotation(quat);
         Eigen::Matrix4d tranMat;
         Eigen::Matrix4d tranMat_inv;
