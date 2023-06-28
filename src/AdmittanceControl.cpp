@@ -1,5 +1,6 @@
 #include <ros/ros.h>
 #include <std_msgs/String.h>
+#include <std_msgs/Bool.h>
 #include <geometry_msgs/WrenchStamped.h>
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/PoseStamped.h>
@@ -13,11 +14,9 @@
 #include <eigen3/Eigen/Eigen>
 #include <dynamic_reconfigure/server.h>
 #include </root/uav_ws/src/uam_force_control/cfg/cpp/uam_force_control/parametersConfig.h>
+#include "/root/uav_ws/devel/include/uam_force_control/MyBoolean.h"
 //include <Eigen/Geometry>
 //include <Eigen/Dense>
-
-
-
 //#include <AdmittanceControl.h>
 
 //AdmittanceSubscriberClass - klasa za pokretanje nodea za impedanciju/admitanciju
@@ -42,27 +41,34 @@ public:
         //mod_trajectory_pub_ = nh_.advertise<nav_msgs::Odometry>("/red/modified_trajectory", 10); 
         force_filter_pub_ = nh_.advertise<geometry_msgs::WrenchStamped>("/red/filtered_force", 10);
         xc_yc_pub_ = nh_.advertise<geometry_msgs::WrenchStamped>("/red/xc_yc", 10);
+        boolean_pub = nh_.advertise<uam_force_control::MyBoolean>("/red/my_boolean_topic", 10);
+        boolean_sub = nh_.subscribe<std_msgs::Bool>("/red/enable_admit_control", 1, &AdmittanceSubscriberClass::enableCb, this);
 
         HISTORY_BUFFER_SIZE = 40;
 
         pose_received = false;
         force_received = false;
 
-        Tws_ << 0, 1, 0, 0,
+        //trans matrix sensor->body
+        Tws_ << 0, 0, 1, 0,
                 -1, 0, 0, 0,
-                0, 0, 1, 0,
+                0, -1, 0, 0,
                 0, 0, 0, 1;
 
         Tws_inv_ = Tws_.inverse();
 
         server.setCallback(boost::bind(&AdmittanceSubscriberClass::callback, this, _1, _2));
 
-
         
     }
 
 
     // Callback functions
+
+    void enableCb(const std_msgs::Bool::ConstPtr& msg){
+        enable_msg = msg->data; 
+    }
+
     void forceCallback(const geometry_msgs::WrenchStamped::ConstPtr& msg)
     {
         //save data from the topic
@@ -200,6 +206,7 @@ public:
 
     void run()
     {
+        if(enable_msg){
         ROS_INFO("running");
         geometry_msgs::PoseStamped output_msg;
         geometry_msgs::WrenchStamped xc_yc_msg;
@@ -265,15 +272,11 @@ public:
         // Modifying the data before publishing
         output_msg.pose.position.x = xct;  
         output_msg.pose.position.y = yct;
-        output_msg.pose.position.z = zct;
-        // output_msg.pose.position.x = xct + x;  
-        // output_msg.pose.position.y = yct + y;
-        // output_msg.pose.position.z = zct + z;
+        output_msg.pose.position.z = z;
+
         updatePose(output_msg);
-
-        //mod_trajectory_pub_.publish(output_msg); //publishing modified message
-
         publish();
+        //mod_trajectory_pub_.publish(output_msg); //publishing modified message
         }
 
         else{
@@ -286,6 +289,7 @@ public:
         pose_received = false;
         force_received = false;
     }
+    }
 
 private:
     ros::NodeHandle nh_;
@@ -295,6 +299,8 @@ private:
     ros::Publisher mod_trajectory_pub_;
     ros::Publisher force_filter_pub_;
     ros::Publisher xc_yc_pub_;
+    ros::Publisher boolean_pub;
+    ros::Subscriber boolean_sub;
 
     //median history
     std::deque<double> force_history_x_; // Declare a deque for storing force values
@@ -331,11 +337,14 @@ private:
 
     dynamic_reconfigure::Server<uam_force_control::parametersConfig> server;
 
+    bool enable_msg = false;
+
 };
 
 
 int main(int argc, char **argv)
 {
+
     // Initialize the ROS node
     ros::init(argc, argv, "admittance_node");
 

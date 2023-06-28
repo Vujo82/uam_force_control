@@ -1,0 +1,947 @@
+<sdf version='1.7'>
+  <world name='default'>
+    <light name='sun' type='directional'>
+      <cast_shadows>1</cast_shadows>
+      <pose>0 0 10 0 -0 0</pose>
+      <diffuse>0.8 0.8 0.8 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <attenuation>
+        <range>1000</range>
+        <constant>0.9</constant>
+        <linear>0.01</linear>
+        <quadratic>0.001</quadratic>
+      </attenuation>
+      <direction>-0.5 0.1 -0.9</direction>
+      <spot>
+        <inner_angle>0</inner_angle>
+        <outer_angle>0</outer_angle>
+        <falloff>0</falloff>
+      </spot>
+    </light>
+    <model name='ground_plane'>
+      <static>1</static>
+      <link name='link'>
+        <collision name='collision'>
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>100 100</size>
+            </plane>
+          </geometry>
+          <surface>
+            <contact>
+              <collide_bitmask>65535</collide_bitmask>
+              <ode/>
+            </contact>
+            <friction>
+              <ode>
+                <mu>100</mu>
+                <mu2>50</mu2>
+              </ode>
+              <torsional>
+                <ode/>
+              </torsional>
+            </friction>
+            <bounce/>
+          </surface>
+          <max_contacts>10</max_contacts>
+        </collision>
+        <visual name='visual'>
+          <cast_shadows>0</cast_shadows>
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>100 100</size>
+            </plane>
+          </geometry>
+          <material>
+            <script>
+              <uri>file://media/materials/scripts/gazebo.material</uri>
+              <name>Gazebo/Grey</name>
+            </script>
+          </material>
+        </visual>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+    </model>
+    <gravity>0 0 -9.8</gravity>
+    <magnetic_field>6e-06 2.3e-05 -4.2e-05</magnetic_field>
+    <atmosphere type='adiabatic'/>
+    <physics type='ode'>
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1</real_time_factor>
+      <real_time_update_rate>1000</real_time_update_rate>
+    </physics>
+    <scene>
+      <ambient>0.4 0.4 0.4 1</ambient>
+      <background>0.7 0.7 0.7 1</background>
+      <shadows>1</shadows>
+    </scene>
+    <wind/>
+    <spherical_coordinates>
+      <surface_model>EARTH_WGS84</surface_model>
+      <latitude_deg>0</latitude_deg>
+      <longitude_deg>0</longitude_deg>
+      <elevation>0</elevation>
+      <heading_deg>0</heading_deg>
+    </spherical_coordinates>
+    <model name='red'>
+      <link name='red/base_link'>
+        <inertial>
+          <pose>0 0 0 0 -0 0</pose>
+          <mass>9.00001</mass>
+          <inertia>
+            <ixx>0.303755</ixx>
+            <ixy>0.000448492</ixy>
+            <ixz>0.00101587</ixz>
+            <iyy>0.27722</iyy>
+            <iyz>-0.00180689</iyz>
+            <izz>0.469164</izz>
+          </inertia>
+        </inertial>
+        <collision name='red/base_link_inertia_collision'>
+          <pose>0 0 0 0 -0 0</pose>
+          <geometry>
+            <box>
+              <size>0.3 0.3 0.6</size>
+            </box>
+          </geometry>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <friction>
+              <ode/>
+              <torsional>
+                <ode/>
+              </torsional>
+            </friction>
+            <bounce/>
+          </surface>
+          <max_contacts>10</max_contacts>
+        </collision>
+        <visual name='red/base_link_inertia_visual'>
+          <pose>0 0 0 0 -0 0</pose>
+          <geometry>
+            <mesh>
+              <scale>0.1 0.1 0.1</scale>
+              <uri>/root/uav_ws/src/uav_ros_simulation/ros_packages/ardupilot_gazebo/models/kopterworx/meshes/kopterworx_model_simple.dae</uri>
+            </mesh>
+          </geometry>
+        </visual>
+        <visual name='red/base_link_fixed_joint_lump__red/camera_box_visual_1'>
+          <pose>0.2 0 0.05 3.14159 1.57079 3.14159</pose>
+          <geometry>
+            <mesh>
+              <scale>1 1 1</scale>
+              <uri>/root/uav_ws/src/uav_ros_simulation/ros_packages/ardupilot_gazebo/models/util/asus_xtion_pro_camera.dae</uri>
+            </mesh>
+          </geometry>
+        </visual>
+        <velocity_decay>
+          <linear>0.001</linear>
+          <angular>0.001</angular>
+        </velocity_decay>
+        <sensor name='camera' type='depth'>
+          <update_rate>30</update_rate>
+          <camera name='head'>
+            <horizontal_fov>1.39626</horizontal_fov>
+            <image>
+              <width>640</width>
+              <height>480</height>
+              <format>B8G8R8</format>
+            </image>
+            <clip>
+              <near>0.02</near>
+              <far>300</far>
+            </clip>
+            <noise>
+              <type>gaussian</type>
+              <mean>0</mean>
+              <stddev>0.007</stddev>
+            </noise>
+          </camera>
+          <plugin name='camera_plugin' filename='libgazebo_ros_openni_kinect.so'>
+            <baseline>0.2</baseline>
+            <alwaysOn>1</alwaysOn>
+            <updateRate>0.0</updateRate>
+            <cameraName>red/camera_ir</cameraName>
+            <imageTopicName>/red/camera/color/image_raw</imageTopicName>
+            <cameraInfoTopicName>/red/camera/color/camera_info</cameraInfoTopicName>
+            <depthImageTopicName>/red/camera/depth/image_raw</depthImageTopicName>
+            <depthImageCameraInfoTopicName>/red/camera/depth/camera_info</depthImageCameraInfoTopicName>
+            <pointCloudTopicName>/red/camera/depth_registered/points</pointCloudTopicName>
+            <frameName>red/camera</frameName>
+            <pointCloudCutoff>0.3</pointCloudCutoff>
+            <pointCloudCutoffMax>10.0</pointCloudCutoffMax>
+            <distortionK1>0</distortionK1>
+            <distortionK2>0</distortionK2>
+            <distortionK3>0</distortionK3>
+            <distortionT1>0</distortionT1>
+            <distortionT2>0</distortionT2>
+            <CxPrime>0</CxPrime>
+            <Cx>0</Cx>
+            <Cy>0</Cy>
+            <focalLength>0</focalLength>
+            <hackBaseline>0</hackBaseline>
+            <robotNamespace>/</robotNamespace>
+          </plugin>
+          <pose>0.2 0 0.05 0 -0 0</pose>
+        </sensor>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <joint name='imu_joint' type='revolute'>
+        <pose relative_to='red/base_link'>0 0 0 0 -0 0</pose>
+        <parent>red/base_link</parent>
+        <child>imu_link</child>
+        <axis>
+          <xyz>1 0 0</xyz>
+          <limit>
+            <lower>0</lower>
+            <upper>0</upper>
+            <effort>0</effort>
+            <velocity>0</velocity>
+          </limit>
+          <dynamics>
+            <spring_reference>0</spring_reference>
+            <spring_stiffness>0</spring_stiffness>
+          </dynamics>
+        </axis>
+      </joint>
+      <link name='imu_link'>
+        <pose relative_to='imu_joint'>0 0 0 0 -0 0</pose>
+        <inertial>
+          <pose>0 0 0 0 -0 0</pose>
+          <mass>0.01</mass>
+          <inertia>
+            <ixx>0.001</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.001</iyy>
+            <iyz>0</iyz>
+            <izz>0.001</izz>
+          </inertia>
+        </inertial>
+        <sensor name='imu_sensor' type='imu'>
+          <always_on>1</always_on>
+          <update_rate>50</update_rate>
+          <visualize>1</visualize>
+          <topic>/red/imu</topic>
+          <pose>0 0 0 -3.14159 -0 0</pose>
+          <plugin name='imu_plugin' filename='libgazebo_ros_imu_sensor.so'>
+            <topicName>/red/imu</topicName>
+            <bodyName>imu_link</bodyName>
+            <updateRateHZ>50.0</updateRateHZ>
+            <gaussianNoise>0.0</gaussianNoise>
+            <xyzOffset>0 0 0</xyzOffset>
+            <rpyOffset>0 0 0</rpyOffset>
+            <frameName>red/imu</frameName>
+            <robotNamespace>/</robotNamespace>
+          </plugin>
+          <imu/>
+        </sensor>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <joint name='red/odometry_sensor_joint' type='revolute'>
+        <pose relative_to='red/base_link'>0 0 0 0 -0 0</pose>
+        <parent>red/base_link</parent>
+        <child>red/odometry_sensor_link</child>
+        <axis>
+          <xyz>1 0 0</xyz>
+          <limit>
+            <lower>0</lower>
+            <upper>0</upper>
+            <effort>0</effort>
+            <velocity>0</velocity>
+          </limit>
+          <dynamics>
+            <spring_reference>0</spring_reference>
+            <spring_stiffness>0</spring_stiffness>
+          </dynamics>
+        </axis>
+      </joint>
+      <link name='red/odometry_sensor_link'>
+        <pose relative_to='red/odometry_sensor_joint'>0 0 0 0 -0 0</pose>
+        <inertial>
+          <pose>0 0 0 0 -0 0</pose>
+          <mass>0.01</mass>
+          <inertia>
+            <ixx>1e-05</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>1e-05</iyy>
+            <iyz>0</iyz>
+            <izz>1e-05</izz>
+          </inertia>
+        </inertial>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <joint name='red/rotor_0_joint' type='revolute'>
+        <pose relative_to='red/base_link'>0.367696 -0.367696 0.115 0 -0 0</pose>
+        <parent>red/base_link</parent>
+        <child>red/rotor_0</child>
+        <axis>
+          <xyz>0 0 1</xyz>
+          <limit>
+            <lower>-1e+16</lower>
+            <upper>1e+16</upper>
+          </limit>
+          <dynamics>
+            <spring_reference>0</spring_reference>
+            <spring_stiffness>0</spring_stiffness>
+          </dynamics>
+        </axis>
+      </joint>
+      <link name='red/rotor_0'>
+        <pose relative_to='red/rotor_0_joint'>0 0 0 0 -0 0</pose>
+        <inertial>
+          <pose>0 0 0 0 -0 0</pose>
+          <mass>0.01</mass>
+          <inertia>
+            <ixx>2.925e-06</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.00101542</iyy>
+            <iyz>0</iyz>
+            <izz>0.00101812</izz>
+          </inertia>
+        </inertial>
+        <collision name='red/rotor_0_collision'>
+          <pose>0 0 0 0 -0 0</pose>
+          <geometry>
+            <cylinder>
+              <length>0.005</length>
+              <radius>0.285</radius>
+            </cylinder>
+          </geometry>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <friction>
+              <ode/>
+              <torsional>
+                <ode/>
+              </torsional>
+            </friction>
+            <bounce/>
+          </surface>
+          <max_contacts>10</max_contacts>
+        </collision>
+        <visual name='red/rotor_0_visual'>
+          <pose>0 0 0 0 -0 0</pose>
+          <geometry>
+            <mesh>
+              <scale>0.002 0.002 0.002</scale>
+              <uri>/root/uav_ws/src/uav_ros_simulation/ros_packages/ardupilot_gazebo/models/util/propeller_ccw.dae</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <script>
+              <name>Gazebo/Blue</name>
+              <uri>file://media/materials/scripts/gazebo.material</uri>
+            </script>
+          </material>
+        </visual>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <joint name='red/rotor_1_joint' type='revolute'>
+        <pose relative_to='red/base_link'>0.367696 0.367696 0.115 0 -0 0</pose>
+        <parent>red/base_link</parent>
+        <child>red/rotor_1</child>
+        <axis>
+          <xyz>0 0 1</xyz>
+          <limit>
+            <lower>-1e+16</lower>
+            <upper>1e+16</upper>
+          </limit>
+          <dynamics>
+            <spring_reference>0</spring_reference>
+            <spring_stiffness>0</spring_stiffness>
+          </dynamics>
+        </axis>
+      </joint>
+      <link name='red/rotor_1'>
+        <pose relative_to='red/rotor_1_joint'>0 0 0 0 -0 0</pose>
+        <inertial>
+          <pose>0 0 0 0 -0 0</pose>
+          <mass>0.01</mass>
+          <inertia>
+            <ixx>2.925e-06</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.00101542</iyy>
+            <iyz>0</iyz>
+            <izz>0.00101812</izz>
+          </inertia>
+        </inertial>
+        <collision name='red/rotor_1_collision'>
+          <pose>0 0 0 0 -0 0</pose>
+          <geometry>
+            <cylinder>
+              <length>0.005</length>
+              <radius>0.285</radius>
+            </cylinder>
+          </geometry>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <friction>
+              <ode/>
+              <torsional>
+                <ode/>
+              </torsional>
+            </friction>
+            <bounce/>
+          </surface>
+          <max_contacts>10</max_contacts>
+        </collision>
+        <visual name='red/rotor_1_visual'>
+          <pose>0 0 0 0 -0 0</pose>
+          <geometry>
+            <mesh>
+              <scale>0.002 0.002 0.002</scale>
+              <uri>/root/uav_ws/src/uav_ros_simulation/ros_packages/ardupilot_gazebo/models/util/propeller_cw.dae</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <script>
+              <name>Gazebo/Red</name>
+              <uri>file://media/materials/scripts/gazebo.material</uri>
+            </script>
+          </material>
+        </visual>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <joint name='red/rotor_2_joint' type='revolute'>
+        <pose relative_to='red/base_link'>-0.367696 0.367696 0.115 0 -0 0</pose>
+        <parent>red/base_link</parent>
+        <child>red/rotor_2</child>
+        <axis>
+          <xyz>0 0 1</xyz>
+          <limit>
+            <lower>-1e+16</lower>
+            <upper>1e+16</upper>
+          </limit>
+          <dynamics>
+            <spring_reference>0</spring_reference>
+            <spring_stiffness>0</spring_stiffness>
+          </dynamics>
+        </axis>
+      </joint>
+      <link name='red/rotor_2'>
+        <pose relative_to='red/rotor_2_joint'>0 0 0 0 -0 0</pose>
+        <inertial>
+          <pose>0 0 0 0 -0 0</pose>
+          <mass>0.01</mass>
+          <inertia>
+            <ixx>2.925e-06</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.00101542</iyy>
+            <iyz>0</iyz>
+            <izz>0.00101812</izz>
+          </inertia>
+        </inertial>
+        <collision name='red/rotor_2_collision'>
+          <pose>0 0 0 0 -0 0</pose>
+          <geometry>
+            <cylinder>
+              <length>0.005</length>
+              <radius>0.285</radius>
+            </cylinder>
+          </geometry>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <friction>
+              <ode/>
+              <torsional>
+                <ode/>
+              </torsional>
+            </friction>
+            <bounce/>
+          </surface>
+          <max_contacts>10</max_contacts>
+        </collision>
+        <visual name='red/rotor_2_visual'>
+          <pose>0 0 0 0 -0 0</pose>
+          <geometry>
+            <mesh>
+              <scale>0.002 0.002 0.002</scale>
+              <uri>/root/uav_ws/src/uav_ros_simulation/ros_packages/ardupilot_gazebo/models/util/propeller_ccw.dae</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <script>
+              <name>Gazebo/Blue</name>
+              <uri>file://media/materials/scripts/gazebo.material</uri>
+            </script>
+          </material>
+        </visual>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <joint name='red/rotor_3_joint' type='revolute'>
+        <pose relative_to='red/base_link'>-0.367696 -0.367696 0.115 0 -0 0</pose>
+        <parent>red/base_link</parent>
+        <child>red/rotor_3</child>
+        <axis>
+          <xyz>0 0 1</xyz>
+          <limit>
+            <lower>-1e+16</lower>
+            <upper>1e+16</upper>
+          </limit>
+          <dynamics>
+            <spring_reference>0</spring_reference>
+            <spring_stiffness>0</spring_stiffness>
+          </dynamics>
+        </axis>
+      </joint>
+      <link name='red/rotor_3'>
+        <pose relative_to='red/rotor_3_joint'>0 0 0 0 -0 0</pose>
+        <inertial>
+          <pose>0 0 0 0 -0 0</pose>
+          <mass>0.01</mass>
+          <inertia>
+            <ixx>2.925e-06</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.00101542</iyy>
+            <iyz>0</iyz>
+            <izz>0.00101812</izz>
+          </inertia>
+        </inertial>
+        <collision name='red/rotor_3_collision'>
+          <pose>0 0 0 0 -0 0</pose>
+          <geometry>
+            <cylinder>
+              <length>0.005</length>
+              <radius>0.285</radius>
+            </cylinder>
+          </geometry>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <friction>
+              <ode/>
+              <torsional>
+                <ode/>
+              </torsional>
+            </friction>
+            <bounce/>
+          </surface>
+          <max_contacts>10</max_contacts>
+        </collision>
+        <visual name='red/rotor_3_visual'>
+          <pose>0 0 0 0 -0 0</pose>
+          <geometry>
+            <mesh>
+              <scale>0.002 0.002 0.002</scale>
+              <uri>/root/uav_ws/src/uav_ros_simulation/ros_packages/ardupilot_gazebo/models/util/propeller_cw.dae</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <script>
+              <name>Gazebo/Red</name>
+              <uri>file://media/materials/scripts/gazebo.material</uri>
+            </script>
+          </material>
+        </visual>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <joint name='sensor_joint' type='prismatic'>
+        <pose relative_to='red/base_link'>0 0 0 0 -0 0</pose>
+        <parent>red/base_link</parent>
+        <child>sensor_link</child>
+        <axis>
+          <xyz>1 0 0</xyz>
+          <limit>
+            <lower>-0.001</lower>
+            <upper>0.001</upper>
+            <effort>100</effort>
+            <velocity>100</velocity>
+          </limit>
+          <dynamics>
+            <spring_reference>0</spring_reference>
+            <spring_stiffness>0</spring_stiffness>
+          </dynamics>
+        </axis>
+        <physics>
+          <provide_feedback>1</provide_feedback>
+          <ode>
+            <implicit_spring_damper>1</implicit_spring_damper>
+            <cfm_damping>1</cfm_damping>
+            <limit>
+              <cfm>0.08</cfm>
+              <erp>0.2</erp>
+            </limit>
+            <provide_feedback>1</provide_feedback>
+          </ode>
+        </physics>
+      </joint>
+      <link name='sensor_link'>
+        <pose relative_to='sensor_joint'>0 0 0 0 -0 0</pose>
+        <inertial>
+          <pose>0 0 0 0 -0 0</pose>
+          <mass>1</mass>
+          <inertia>
+            <ixx>1</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>1</iyy>
+            <iyz>0</iyz>
+            <izz>1</izz>
+          </inertia>
+        </inertial>
+        <collision name='sensor_link_collision'>
+          <pose>0 0 0 3.14159 1.57079 3.14159</pose>
+          <geometry>
+            <cylinder>
+              <length>2</length>
+              <radius>0.02</radius>
+            </cylinder>
+          </geometry>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <friction>
+              <ode/>
+              <torsional>
+                <ode/>
+              </torsional>
+            </friction>
+            <bounce/>
+          </surface>
+          <max_contacts>10</max_contacts>
+        </collision>
+        <visual name='sensor_link_visual'>
+          <pose>0 0 0 3.14159 1.57079 3.14159</pose>
+          <geometry>
+            <cylinder>
+              <length>2</length>
+              <radius>0.02</radius>
+            </cylinder>
+          </geometry>
+        </visual>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <plugin name='gazebo_ros_control' filename='libgazebo_ros_control.so'>
+        <robotNamespace>/red</robotNamespace>
+        <robotParam>/red/robot_description</robotParam>
+        <robotSimType>gazebo_ros_control/DefaultRobotHWSim</robotSimType>
+      </plugin>
+      <plugin name='ft_sensor' filename='libgazebo_ros_ft_sensor.so'>
+        <updateRate>100.0</updateRate>
+        <robotNamespace>red</robotNamespace>
+        <topicName>/red/ft_sensor</topicName>
+        <jointName>sensor_joint</jointName>
+        <noise>
+          <type>gaussian</type>
+          <mean>0.0</mean>
+          <stddev>0.0001</stddev>
+        </noise>
+      </plugin>
+      <plugin name='rosbag' filename='librotors_gazebo_multirotor_base_plugin.so'>
+        <robotNamespace>red</robotNamespace>
+        <linkName>red/base_link</linkName>
+        <rotorVelocitySlowdownSim>15</rotorVelocitySlowdownSim>
+      </plugin>
+      <plugin name='front_left_motor_model' filename='librotors_gazebo_motor_model.so'>
+        <jointName>red/rotor_1_joint</jointName>
+        <linkName>red/rotor_1</linkName>
+        <turningDirection>cw</turningDirection>
+        <timeConstantUp>0.0125</timeConstantUp>
+        <timeConstantDown>0.0125</timeConstantDown>
+        <maxRotVelocity>600</maxRotVelocity>
+        <motorConstant>0.000285576174524687</motorConstant>
+        <momentConstant>0.041365783102071</momentConstant>
+        <commandSubTopic>red/gazebo/command/motor_speed</commandSubTopic>
+        <motorNumber>1</motorNumber>
+        <rotorDragCoefficient>8.06428e-05</rotorDragCoefficient>
+        <rollingMomentCoefficient>1e-06</rollingMomentCoefficient>
+        <motorVelocityTopic>red/motor_vel/1</motorVelocityTopic>
+        <rotorVelocitySlowdownSim>15</rotorVelocitySlowdownSim>
+        <robotNamespace>/</robotNamespace>
+      </plugin>
+      <plugin name='front_right_motor_model' filename='librotors_gazebo_motor_model.so'>
+        <jointName>red/rotor_0_joint</jointName>
+        <linkName>red/rotor_0</linkName>
+        <turningDirection>ccw</turningDirection>
+        <timeConstantUp>0.0125</timeConstantUp>
+        <timeConstantDown>0.0125</timeConstantDown>
+        <maxRotVelocity>600</maxRotVelocity>
+        <motorConstant>0.000285576174524687</motorConstant>
+        <momentConstant>0.041365783102071</momentConstant>
+        <commandSubTopic>red/gazebo/command/motor_speed</commandSubTopic>
+        <motorNumber>0</motorNumber>
+        <rotorDragCoefficient>8.06428e-05</rotorDragCoefficient>
+        <rollingMomentCoefficient>1e-06</rollingMomentCoefficient>
+        <motorVelocityTopic>red/motor_vel/0</motorVelocityTopic>
+        <rotorVelocitySlowdownSim>15</rotorVelocitySlowdownSim>
+        <robotNamespace>/</robotNamespace>
+      </plugin>
+      <plugin name='back_left_motor_model' filename='librotors_gazebo_motor_model.so'>
+        <jointName>red/rotor_2_joint</jointName>
+        <linkName>red/rotor_2</linkName>
+        <turningDirection>ccw</turningDirection>
+        <timeConstantUp>0.0125</timeConstantUp>
+        <timeConstantDown>0.0125</timeConstantDown>
+        <maxRotVelocity>600</maxRotVelocity>
+        <motorConstant>0.000285576174524687</motorConstant>
+        <momentConstant>0.041365783102071</momentConstant>
+        <commandSubTopic>red/gazebo/command/motor_speed</commandSubTopic>
+        <motorNumber>2</motorNumber>
+        <rotorDragCoefficient>8.06428e-05</rotorDragCoefficient>
+        <rollingMomentCoefficient>1e-06</rollingMomentCoefficient>
+        <motorVelocityTopic>red/motor_vel/2</motorVelocityTopic>
+        <rotorVelocitySlowdownSim>15</rotorVelocitySlowdownSim>
+        <robotNamespace>/</robotNamespace>
+      </plugin>
+      <plugin name='back_right_motor_model' filename='librotors_gazebo_motor_model.so'>
+        <jointName>red/rotor_3_joint</jointName>
+        <linkName>red/rotor_3</linkName>
+        <turningDirection>cw</turningDirection>
+        <timeConstantUp>0.0125</timeConstantUp>
+        <timeConstantDown>0.0125</timeConstantDown>
+        <maxRotVelocity>600</maxRotVelocity>
+        <motorConstant>0.000285576174524687</motorConstant>
+        <momentConstant>0.041365783102071</momentConstant>
+        <commandSubTopic>red/gazebo/command/motor_speed</commandSubTopic>
+        <motorNumber>3</motorNumber>
+        <rotorDragCoefficient>8.06428e-05</rotorDragCoefficient>
+        <rollingMomentCoefficient>1e-06</rollingMomentCoefficient>
+        <motorVelocityTopic>red/motor_vel/3</motorVelocityTopic>
+        <rotorVelocitySlowdownSim>15</rotorVelocitySlowdownSim>
+        <robotNamespace>/</robotNamespace>
+      </plugin>
+      <plugin name='arducopter_plugin' filename='libArduPilotPlugin.so'>
+        <imuTopicName>/red/imu</imuTopicName>
+        <controlTopicName>/red/gazebo/command/motor_speed</controlTopicName>
+        <fdm_addr>127.0.0.1</fdm_addr>
+        <fdm_port_in>9002</fdm_port_in>
+        <fdm_port_out>9003</fdm_port_out>
+        <modelXYZToAirplaneXForwardZDown>0 0 0 3.141593 0 0</modelXYZToAirplaneXForwardZDown>
+        <gazeboXYZToNED>0 0 0 3.141593 0 0</gazeboXYZToNED>
+        <imuName>red::imu_link::imu_sensor</imuName>
+        <connectionTimeoutMaxCount>5</connectionTimeoutMaxCount>
+        <control channel='0'>
+          <type>VELOCITY</type>
+          <offset>0</offset>
+          <jointName>red::red/rotor_1_joint</jointName>
+          <multiplier>600</multiplier>
+          <controlVelocitySlowdownSim>15</controlVelocitySlowdownSim>
+        </control>
+        <control channel='1'>
+          <type>VELOCITY</type>
+          <offset>0</offset>
+          <jointName>red::red/rotor_3_joint</jointName>
+          <multiplier>600</multiplier>
+          <controlVelocitySlowdownSim>15</controlVelocitySlowdownSim>
+        </control>
+        <control channel='2'>
+          <type>VELOCITY</type>
+          <offset>0</offset>
+          <jointName>red::red/rotor_0_joint</jointName>
+          <multiplier>600</multiplier>
+          <controlVelocitySlowdownSim>15</controlVelocitySlowdownSim>
+        </control>
+        <control channel='3'>
+          <type>VELOCITY</type>
+          <offset>0</offset>
+          <jointName>red::red/rotor_2_joint</jointName>
+          <multiplier>600</multiplier>
+          <controlVelocitySlowdownSim>15</controlVelocitySlowdownSim>
+        </control>
+        <robotNamespace>/</robotNamespace>
+      </plugin>
+      <static>0</static>
+      <plugin name='odometry_sensor' filename='librotors_gazebo_odometry_plugin.so'>
+        <linkName>red/odometry_sensor_link</linkName>
+        <robotNamespace>red</robotNamespace>
+        <poseTopic>pose</poseTopic>
+        <velocityRelativeTopic>velocity_relative</velocityRelativeTopic>
+        <poseWithCovarianceTopic>pose_with_covariance</poseWithCovarianceTopic>
+        <positionTopic>position</positionTopic>
+        <transformTopic>transform</transformTopic>
+        <odometryTopic>odometry</odometryTopic>
+        <parentFrameId>world</parentFrameId>
+        <childFrameId>red/base_link</childFrameId>
+        <measurementDivisor>20</measurementDivisor>
+        <measurementDelay>0</measurementDelay>
+        <unknownDelay>0.0</unknownDelay>
+        <noiseNormalPosition>0.0 0.0 0.0</noiseNormalPosition>
+        <noiseNormalQuaternion>0.0 0.0 0.0</noiseNormalQuaternion>
+        <noiseNormalLinearVelocity>0.0 0.0 0.0</noiseNormalLinearVelocity>
+        <noiseNormalAngularVelocity>0.0 0.0 0.0</noiseNormalAngularVelocity>
+        <noiseUniformPosition>0.0 0.0 0.0</noiseUniformPosition>
+        <noiseUniformQuaternion>0.0 0.0 0.0</noiseUniformQuaternion>
+        <noiseUniformLinearVelocity>0.0 0.0 0.0</noiseUniformLinearVelocity>
+        <noiseUniformAngularVelocity>0.0 0.0 0.0</noiseUniformAngularVelocity>
+      </plugin>
+      <pose>0 0 0.5 0 -0 0</pose>
+    </model>
+    <model name='unit_box'>
+      <pose>-0.044346 -3.89377 0.5 0 -0 0</pose>
+      <link name='link'>
+        <inertial>
+          <mass>1</mass>
+          <inertia>
+            <ixx>0.166667</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.166667</iyy>
+            <iyz>0</iyz>
+            <izz>0.166667</izz>
+          </inertia>
+          <pose>0 0 0 0 -0 0</pose>
+        </inertial>
+        <collision name='collision'>
+          <geometry>
+            <box>
+              <size>1 1 0.999999</size>
+            </box>
+          </geometry>
+          <max_contacts>10</max_contacts>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <bounce/>
+            <friction>
+              <torsional>
+                <ode/>
+              </torsional>
+              <ode/>
+            </friction>
+          </surface>
+        </collision>
+        <visual name='visual'>
+          <geometry>
+            <box>
+              <size>1 1 0.999999</size>
+            </box>
+          </geometry>
+          <material>
+            <script>
+              <name>Gazebo/Grey</name>
+              <uri>file://media/materials/scripts/gazebo.material</uri>
+            </script>
+          </material>
+        </visual>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+    </model>
+    <state world_name='default'>
+      <sim_time>232 513000000</sim_time>
+      <real_time>332 575683902</real_time>
+      <wall_time>1683891804 335561071</wall_time>
+      <iterations>232513</iterations>
+      <model name='ground_plane'>
+        <pose>0 0 0 0 -0 0</pose>
+        <scale>1 1 1</scale>
+        <link name='link'>
+          <pose>0 0 0 0 -0 0</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0 0 0 0 -0 0</acceleration>
+          <wrench>0 0 0 0 -0 0</wrench>
+        </link>
+      </model>
+      <model name='red'>
+        <pose>0.255374 0.207761 2.1708 -0.002033 -0.000105 -0.06686</pose>
+        <scale>1 1 1</scale>
+        <link name='imu_link'>
+          <pose>0.255374 0.207761 2.1708 -0.002033 -0.000105 -0.06686</pose>
+          <velocity>0.013793 0.008523 -0.001013 0.009956 -0.021207 -8.1e-05</velocity>
+          <acceleration>-0.013319 0.012462 0.000311 0.082268 0.013918 -0.001037</acceleration>
+          <wrench>-0.000133 0.000125 3e-06 0 -0 0</wrench>
+        </link>
+        <link name='red/base_link'>
+          <pose>0.255374 0.207761 2.1708 -0.002033 -0.000105 -0.06686</pose>
+          <velocity>0.013779 0.008514 -0.001012 0.009946 -0.021186 -8.1e-05</velocity>
+          <acceleration>0.000487 0.020973 -0.000702 0.092122 -0.006714 -0.0011</acceleration>
+          <wrench>0.004386 0.188756 -0.00632 0 -0 0</wrench>
+        </link>
+        <link name='red/odometry_sensor_link'>
+          <pose>0.255374 0.207761 2.1708 -0.002033 -0.000105 -0.06686</pose>
+          <velocity>0.013793 0.008523 -0.001013 0.009956 -0.021207 -8.1e-05</velocity>
+          <acceleration>-0.013319 0.012462 0.000311 0.082268 0.013918 -0.001037</acceleration>
+          <wrench>-0.000133 0.000125 3e-06 0 -0 0</wrench>
+        </link>
+        <link name='red/rotor_0'>
+          <pose>0.597687 -0.183444 2.28658 0.002034 -5.6e-05 -3.12954</pose>
+          <velocity>0.011306 0.007342 0.002351 0.010774 0.018684 0.704643</velocity>
+          <acceleration>-0.000833 0.009905 -0.034281 0.360076 0.098661 0.000236</acceleration>
+          <wrench>-8e-06 9.9e-05 -0.000343 0 -0 0</wrench>
+        </link>
+        <link name='red/rotor_1'>
+          <pose>0.646818 0.550303 2.28509 0.002005 0.00036 2.94908</pose>
+          <velocity>0.011397 0.007353 0.010699 0.009155 -0.061246 -0.756346</velocity>
+          <acceleration>-8.8e-05 0.009951 0.033688 -1.11564 0.117339 3.13642</acceleration>
+          <wrench>-1e-06 0.0001 0.000337 0 -0 0</wrench>
+        </link>
+        <link name='red/rotor_2'>
+          <pose>-0.086931 0.599435 2.28501 0.001958 -0.000554 -2.88143</pose>
+          <velocity>0.011403 0.007413 -0.004373 0.010811 0.018848 0.77111</velocity>
+          <acceleration>0.000128 0.010848 0.032855 -2.53883 0.512711 0.012643</acceleration>
+          <wrench>1e-06 0.000108 0.000329 0 -0 0</wrench>
+        </link>
+        <link name='red/rotor_3'>
+          <pose>-0.136062 -0.134313 2.2865 0.001887 0.000768 2.74042</pose>
+          <velocity>0.011312 0.007402 -0.01272 0.009152 -0.061138 -0.706888</velocity>
+          <acceleration>-0.000617 0.010802 -0.035114 -0.4739 1.28028 3.11377</acceleration>
+          <wrench>-6e-06 0.000108 -0.000351 0 -0 0</wrench>
+        </link>
+        <link name='sensor_link'>
+          <pose>0.255649 0.207743 2.1708 -0.002033 -0.000105 -0.06686</pose>
+          <velocity>0.018231 0.008226 -0.001007 0.009956 -0.021207 -8.1e-05</velocity>
+          <acceleration>-5.9e-05 0.011573 0.000489 0.082268 0.013916 -0.001037</acceleration>
+          <wrench>-5.9e-05 0.011573 0.000489 0 -0 0</wrench>
+        </link>
+      </model>
+      <model name='unit_box'>
+        <pose>0.090244 -1.94461 2.06284 0 -1e-06 -0.000221</pose>
+        <scale>3.1511 1 4.12569</scale>
+        <link name='link'>
+          <pose>0.090244 -1.94461 2.06284 0 -1e-06 -0.000221</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>4.46109 -0.618443 5.18427 -2.44277 1.00071 2.6532</acceleration>
+          <wrench>4.46109 -0.618443 5.18427 0 -0 0</wrench>
+        </link>
+      </model>
+      <light name='sun'>
+        <pose>0 0 10 0 -0 0</pose>
+      </light>
+    </state>
+    <gui fullscreen='0'>
+      <camera name='user_camera'>
+        <pose>-15.5295 -0.448757 11.1853 0 0.495643 -0.075802</pose>
+        <view_controller>orbit</view_controller>
+        <projection_type>perspective</projection_type>
+      </camera>
+    </gui>
+  </world>
+</sdf>
