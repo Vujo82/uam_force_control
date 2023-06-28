@@ -298,7 +298,7 @@ public:
         ROS_INFO_STREAM("Body x: " << xcb << "Body y: " << ycb << "Body z:" << zcb); 
 
         //multiplying the force vector with invers of a transformational matrix
-        Eigen::Vector4d force_vector_transform = tranMat_inv * Tws_inv_ *force_vector;
+        Eigen::Vector4d force_vector_transform = tranMat * Tws_ *force_vector;
         //transforming the vector back to geometry_msgs::WrenchStamped
         double xct = force_vector_transform(0);
         double yct = force_vector_transform(1);
