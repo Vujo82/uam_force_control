@@ -35,7 +35,7 @@ public:
         nh_ = ros::NodeHandle();
 
         // Subscribe/publish to the topicmod_trajectory_pub_
-        force_sub_ = nh_.subscribe("red/ft_sensor", 1, &AdmittanceSubscriberClass::forceCallback, this);
+        force_sub_ = nh_.subscribe("/optoforce_node/OptoForceWrench", 1, &AdmittanceSubscriberClass::forceCallback, this);
         pose_sub_ = nh_.subscribe("/red/mavros/global_position/local", 1, &AdmittanceSubscriberClass::poseCallback, this);
         odom_sub_ = nh_.subscribe("red/odometry", 1, &AdmittanceSubscriberClass::odomCallback, this);
         mod_trajectory_pub_= nh_.advertise<geometry_msgs::PoseStamped>("/red/tracker/input_pose", 10);
@@ -59,6 +59,7 @@ public:
         Tws_inv_ = Tws_.inverse();
 
         server.setCallback(boost::bind(&AdmittanceSubscriberClass::callback, this, _1, _2));
+        
 
         
     }
@@ -245,7 +246,7 @@ public:
     }
 
     void run()
-    {
+    {   ROS_INFO_STREAM("Enable msg: " << enable_msg << "Calibrated: " << calibrated);  
         if(enable_msg && calibrated){
         ROS_INFO("running");
         geometry_msgs::PoseStamped output_msg;
@@ -274,6 +275,7 @@ public:
         tranMat.row(3)[2] = 0;
 
         Eigen::IOFormat matrixFormat(Eigen::FullPrecision, 0, ", ", ";\n", "[", "]", "[", "]");
+        //ROS_INFO_STREAM("quat: " << qx << "\ " << qy << "\ " << qz << "\"); 
         ROS_INFO_STREAM("transformational matrix: \n" << tranMat.format(matrixFormat));
 
         tranMat_inv = tranMat.inverse();
@@ -288,12 +290,20 @@ public:
         //make a force vector
         Eigen::Vector4d force_vector;
         force_vector << xc, yc, zc, 0;
+
+        Eigen::Vector4d force_vector_body = Tws_inv_ * force_vector; 
+        double xcb = force_vector_body(0); 
+        double ycb = force_vector_body(1); 
+        double zcb = force_vector_body(2); 
+        ROS_INFO_STREAM("Body x: " << xcb << "Body y: " << ycb << "Body z:" << zcb); 
+
         //multiplying the force vector with invers of a transformational matrix
         Eigen::Vector4d force_vector_transform = tranMat_inv * Tws_inv_ *force_vector;
         //transforming the vector back to geometry_msgs::WrenchStamped
         double xct = force_vector_transform(0);
-        double yct = force_vector_transform(1);  
-        double zct = force_vector_transform(2);      
+        double yct = force_vector_transform(1);
+        double zct = force_vector_transform(2);
+        ROS_INFO_STREAM("Wx: " << xct << "Wy: " << yct << "Wz: " << zct); 
 
         //test publisher publishing
         xc_yc_msg.wrench.force.x = xct;
@@ -324,7 +334,6 @@ public:
         output_msg.pose.position.y = y;
         output_msg.pose.position.z = z;
         }
-        
         //mod_trajectory_pub_.publish(output_msg); //publishing modified message
         pose_received = false;
         force_received = false;
@@ -413,14 +422,11 @@ int main(int argc, char **argv)
     // Create an instance of the subscriber/publisher class
     AdmittanceSubscriberClass my_subscriber;
 
-    ros::Rate rate(10);
-
+    ros::Rate rate(50);
     while(ros::ok()){
-        if(my_subscriber.pose_received && my_subscriber.force_received){
         my_subscriber.run();
-        }
-        ros::spinOnce();
-        //rate.sleep();
+        rate.sleep();
+        ros::spinOnce(); 
     }
 
     ros::shutdown(); 
