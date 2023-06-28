@@ -14,7 +14,8 @@
 #include <eigen3/Eigen/Eigen>
 #include <dynamic_reconfigure/server.h>
 #include </root/uav_ws/src/uam_force_control/cfg/cpp/uam_force_control/parametersConfig.h>
-#include "/root/uav_ws/devel/include/uam_force_control/MyBoolean.h"
+#include <numeric>
+//#include "/root/uav_ws/devel/include/uam_force_control/MyBoolean.h"
 //include <Eigen/Geometry>
 //include <Eigen/Dense>
 //#include <AdmittanceControl.h>
@@ -38,10 +39,10 @@ public:
         pose_sub_ = nh_.subscribe("/red/mavros/global_position/local", 1, &AdmittanceSubscriberClass::poseCallback, this);
         odom_sub_ = nh_.subscribe("red/odometry", 1, &AdmittanceSubscriberClass::odomCallback, this);
         mod_trajectory_pub_= nh_.advertise<geometry_msgs::PoseStamped>("/red/tracker/input_pose", 10);
+        filtered_sub = nh_.subscribe("/red/filtered_force", 1, &AdmittanceSubscriberClass::filtForceCb, this);
         //mod_trajectory_pub_ = nh_.advertise<nav_msgs::Odometry>("/red/modified_trajectory", 10); 
         force_filter_pub_ = nh_.advertise<geometry_msgs::WrenchStamped>("/red/filtered_force", 10);
         xc_yc_pub_ = nh_.advertise<geometry_msgs::WrenchStamped>("/red/xc_yc", 10);
-        boolean_pub = nh_.advertise<uam_force_control::MyBoolean>("/red/my_boolean_topic", 10);
         boolean_sub = nh_.subscribe<std_msgs::Bool>("/red/enable_admit_control", 1, &AdmittanceSubscriberClass::enableCb, this);
 
         HISTORY_BUFFER_SIZE = 40;
@@ -51,8 +52,8 @@ public:
 
         //trans matrix sensor->body
         Tws_ << 0, 0, 1, 0,
-                -1, 0, 0, 0,
                 0, -1, 0, 0,
+                1, 0, 0, 0,
                 0, 0, 0, 1;
 
         Tws_inv_ = Tws_.inverse();
@@ -69,10 +70,49 @@ public:
         enable_msg = msg->data; 
     }
 
+    void filtForceCb(const geometry_msgs::WrenchStamped::ConstPtr& msg){
+        if(!calibrated){
+            calibrate(msg, timeout);
+        }
+    }
+    
+    void calibrate(const geometry_msgs::WrenchStamped::ConstPtr& msg, double timeout){
+        ROS_INFO_THROTTLE(1, "Force calibration...");
+        if(first_run){
+            ros::Time start_time = ros::Time::now();
+            calibration_start_time = start_time.toSec();
+            elapsed = 0;
+            first_run = false;
+        }
+        else{
+            elapsed = ros::Time::now().toSec() - calibration_start_time;
+        }
+
+
+        if(elapsed < timeout){
+            double force_x = msg->wrench.force.x;
+            double force_y = msg->wrench.force.y;
+            double force_z = msg->wrench.force.z;
+
+            ff_x_calibrate.push_back(force_x);
+            ff_y_calibrate.push_back(force_y);
+            ff_z_calibrate.push_back(force_z);
+        }
+        else{
+            calibrated_value.wrench.force.x = std::accumulate(ff_x_calibrate.begin(), ff_x_calibrate.end(), 0.0)/ff_x_calibrate.size();
+            calibrated_value.wrench.force.y = std::accumulate(ff_y_calibrate.begin(), ff_y_calibrate.end(), 0.0)/ff_y_calibrate.size();
+            calibrated_value.wrench.force.z = std::accumulate(ff_z_calibrate.begin(), ff_z_calibrate.end(), 0.0)/ff_z_calibrate.size();
+            calibrated = true;
+            ROS_INFO_STREAM("f_x: " << calibrated_value.wrench.force.x << "ff_y: " << calibrated_value.wrench.force.y << "ff_z: " << calibrated_value.wrench.force.z);
+
+        }       
+        
+    }
+
     void forceCallback(const geometry_msgs::WrenchStamped::ConstPtr& msg)
     {
         //save data from the topic
-        //ROS_INFO("Received force message");
+        ROS_INFO_ONCE("Received force message");
         //mozda treba dodati i za header
         double force_x = msg->wrench.force.x;
         double force_y = msg->wrench.force.y;
@@ -206,7 +246,7 @@ public:
 
     void run()
     {
-        if(enable_msg){
+        if(enable_msg && calibrated){
         ROS_INFO("running");
         geometry_msgs::PoseStamped output_msg;
         geometry_msgs::WrenchStamped xc_yc_msg;
@@ -249,7 +289,7 @@ public:
         Eigen::Vector4d force_vector;
         force_vector << xc, yc, zc, 0;
         //multiplying the force vector with invers of a transformational matrix
-        Eigen::Vector4d force_vector_transform = tranMat_inv * force_vector;
+        Eigen::Vector4d force_vector_transform = tranMat_inv * Tws_inv_ *force_vector;
         //transforming the vector back to geometry_msgs::WrenchStamped
         double xct = force_vector_transform(0);
         double yct = force_vector_transform(1);  
@@ -301,6 +341,7 @@ private:
     ros::Publisher xc_yc_pub_;
     ros::Publisher boolean_pub;
     ros::Subscriber boolean_sub;
+    ros::Subscriber filtered_sub;
 
     //median history
     std::deque<double> force_history_x_; // Declare a deque for storing force values
@@ -336,8 +377,29 @@ private:
     Eigen::Matrix4d Tws_inv_;
 
     dynamic_reconfigure::Server<uam_force_control::parametersConfig> server;
-
+    
+    //node enable flag
     bool enable_msg = false;
+
+    //calibration flag
+    bool calibrated = false;
+
+    //duration of calibration procedure
+    double timeout = 5;
+
+    //lists for calibration
+    std::vector<double> ff_x_calibrate;
+    std::vector<double> ff_y_calibrate;
+    std::vector<double> ff_z_calibrate;
+
+    geometry_msgs::WrenchStamped calibrated_value;
+
+    bool first_run = true;
+    double calibration_start_time;
+
+    int elapsed;
+
+
 
 };
 
