@@ -1,6 +1,7 @@
 #include <ros/ros.h>
 #include <std_msgs/String.h>
 #include <std_msgs/Bool.h>
+#include <std_msgs/Float32.h>
 #include <geometry_msgs/WrenchStamped.h>
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/PoseStamped.h>
@@ -40,7 +41,7 @@ public:
         odom_sub_ = nh_.subscribe("red/odometry", 1, &AdmittanceSubscriberClass::odomCallback, this);
         mod_trajectory_pub_= nh_.advertise<geometry_msgs::PoseStamped>("/red/tracker/input_pose", 10);
         filtered_sub = nh_.subscribe("/red/filtered_force", 1, &AdmittanceSubscriberClass::filtForceCb, this);
-        //mod_trajectory_pub_ = nh_.advertise<nav_msgs::Odometry>("/red/modified_trajectory", 10); 
+        set_k_sub_ = nh_.subscribe("/red/setK", 1, &AdmittanceSubscriberClass::setKCb, this); 
         force_filter_pub_ = nh_.advertise<geometry_msgs::WrenchStamped>("/red/filtered_force", 10);
         xc_yc_pub_ = nh_.advertise<geometry_msgs::WrenchStamped>("/red/xc_yc", 10);
         boolean_sub = nh_.subscribe<std_msgs::Bool>("/red/enable_admit_control", 1, &AdmittanceSubscriberClass::enableCb, this);
@@ -75,6 +76,11 @@ public:
         if(!calibrated){
             calibrate(msg, timeout);
         }
+    }
+
+    void setKCb (const std_msgs::Float32::ConstPtr& msg){
+        K = msg->data;
+        ROS_INFO_STREAM("K is set to:" << K );
     }
     
     void calibrate(const geometry_msgs::WrenchStamped::ConstPtr& msg, double timeout){
@@ -351,6 +357,7 @@ private:
     ros::Publisher boolean_pub;
     ros::Subscriber boolean_sub;
     ros::Subscriber filtered_sub;
+    ros::Subscriber set_k_sub_;
 
     //median history
     std::deque<double> force_history_x_; // Declare a deque for storing force values
