@@ -319,16 +319,12 @@ public:
 
         //make a force vector
         Eigen::Vector4d force_vector;
-        force_vector << xc, yc, zc, 0;
+        force_vector << xc, yc, zc, 1;
 
-        Eigen::Vector4d force_vector_body = Tws_inv_ * force_vector; 
-        double xcb = force_vector_body(0); 
-        double ycb = force_vector_body(1); 
-        double zcb = force_vector_body(2); 
-        ROS_INFO_STREAM("Body x: " << xcb << "Body y: " << ycb << "Body z:" << zcb); 
+        //Eigen::Vector4d force_vector_body = Tws_inv_ * force_vector; 
 
         //multiplying the force vector with invers of a transformational matrix
-        Eigen::Vector4d force_vector_transform = tranMat * Tws_ *force_vector;
+        Eigen::Vector4d force_vector_transform = tranMat * Tws_ * force_vector;
         //transforming the vector back to geometry_msgs::WrenchStamped
         double xct = force_vector_transform(0);
         double yct = force_vector_transform(1);
@@ -340,12 +336,6 @@ public:
         xc_yc_msg.y = yct;
         xc_yc_msg.z = zct;
         xc_yc_pub_.publish(xc_yc_msg);
-
-        // output_msg.time_from_start = ros::Duration(time_from_start);
-        // output_msg.transforms.resize(1);
-        // output_msg.velocities.resize(1);
-
-        ROS_INFO("----- ocitala se sila veca od 5N u smjeru x/y -----");
 
         // Modifying the data before publishing
         output_msg.pose.position.x = xct;  
