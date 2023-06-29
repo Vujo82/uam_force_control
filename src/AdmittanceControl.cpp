@@ -348,9 +348,9 @@ public:
         ROS_INFO("----- ocitala se sila veca od 5N u smjeru x/y -----");
 
         // Modifying the data before publishing
-        output_msg.pose.position.x = current_x + xct;  
-        output_msg.pose.position.y = current_y + yct;
-        output_msg.pose.position.z = current_z + z;
+        output_msg.pose.position.x = xct;  
+        output_msg.pose.position.y = yct;
+        output_msg.pose.position.z = z;
 
         updatePose(output_msg);
         publish();
