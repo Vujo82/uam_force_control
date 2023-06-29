@@ -17,6 +17,7 @@
 #include <dynamic_reconfigure/server.h>
 #include </root/uav_ws/src/uam_force_control/cfg/cpp/uam_force_control/parametersConfig.h>
 #include <numeric>
+#include <cmath>
 //#include "/root/uav_ws/devel/include/uam_force_control/MyBoolean.h"
 //include <Eigen/Geometry>
 //include <Eigen/Dense>
@@ -119,12 +120,29 @@ public:
 
     void forceCallback(const geometry_msgs::WrenchStamped::ConstPtr& msg)
     {
+        double force_x; double force_y; double force_z;
         //save data from the topic
         ROS_INFO_ONCE("Received force message");
-        //mozda treba dodati i za header
-        double force_x = msg->wrench.force.x;
-        double force_y = msg->wrench.force.y;
-        double force_z = msg->wrench.force.z;
+        
+        if(std::abs(msg->wrench.force.x)<0.1 ){
+            force_x = 0;
+        }
+        else{
+            force_x = msg->wrench.force.x;
+        }
+        if(std::abs(msg->wrench.force.y)<0.1 ){
+            force_y = 0;
+        }
+        else{
+            force_y = msg->wrench.force.y;
+        }
+        if(std::abs(msg->wrench.force.z)<0.1 ){
+            force_z = 0;
+        }
+        else{
+            force_z = msg->wrench.force.z;
+        }
+
         double torque_x = msg->wrench.torque.x;
         double torque_y = msg->wrench.torque.y;
         double torque_z = msg->wrench.torque.z;
@@ -229,6 +247,11 @@ public:
     {
         //ROS_INFO("Received odometry message: x=%f, y=%f, z=%f", msg->pose.pose.position.x, msg->pose.pose.position.y, msg->pose.pose.position.z);
         //ROS_INFO("Received odometry message");
+
+        current_x = msg->pose.pose.position.x;
+        current_y = msg->pose.pose.position.y;
+        current_z = msg->pose.pose.position.z;
+
     }
 
     void updatePose(const geometry_msgs::PoseStamped& pose) {
@@ -322,25 +345,17 @@ public:
         // output_msg.transforms.resize(1);
         // output_msg.velocities.resize(1);
 
-        if(filtered_msg.wrench.force.x > 5 || filtered_msg.wrench.force.x < -5 || filtered_msg.wrench.force.y > 5 || filtered_msg.wrench.force.y < -5)
-        {
         ROS_INFO("----- ocitala se sila veca od 5N u smjeru x/y -----");
 
         // Modifying the data before publishing
-        output_msg.pose.position.x = xct;  
-        output_msg.pose.position.y = yct;
-        output_msg.pose.position.z = z;
+        output_msg.pose.position.x = current_x + xct;  
+        output_msg.pose.position.y = current_y + yct;
+        output_msg.pose.position.z = current_z + z;
 
         updatePose(output_msg);
         publish();
         //mod_trajectory_pub_.publish(output_msg); //publishing modified message
-        }
 
-        else{
-        output_msg.pose.position.x = x;
-        output_msg.pose.position.y = y;
-        output_msg.pose.position.z = z;
-        }
         //mod_trajectory_pub_.publish(output_msg); //publishing modified message
         pose_received = false;
         force_received = false;
@@ -416,8 +431,10 @@ private:
 
     int elapsed;
 
-
-
+    //current position callback function variables
+    double current_x;
+    double current_y;
+    double current_z;
 };
 
 
