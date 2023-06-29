@@ -3,6 +3,7 @@
 #include <std_msgs/Bool.h>
 #include <std_msgs/Float32.h>
 #include <geometry_msgs/WrenchStamped.h>
+#include <geometry_msgs/Vector3.h>
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <iostream>
@@ -43,7 +44,7 @@ public:
         filtered_sub = nh_.subscribe("/red/filtered_force", 1, &AdmittanceSubscriberClass::filtForceCb, this);
         set_k_sub_ = nh_.subscribe("/red/setK", 1, &AdmittanceSubscriberClass::setKCb, this); 
         force_filter_pub_ = nh_.advertise<geometry_msgs::WrenchStamped>("/red/filtered_force", 10);
-        xc_yc_pub_ = nh_.advertise<geometry_msgs::WrenchStamped>("/red/xc_yc", 10);
+        xc_yc_pub_ = nh_.advertise<geometry_msgs::Vector3>("/red/position_cmd", 10);
         boolean_sub = nh_.subscribe<std_msgs::Bool>("/red/enable_admit_control", 1, &AdmittanceSubscriberClass::enableCb, this);
 
         HISTORY_BUFFER_SIZE = 40;
@@ -256,7 +257,7 @@ public:
         if(enable_msg && calibrated){
         ROS_INFO("running");
         geometry_msgs::PoseStamped output_msg;
-        geometry_msgs::WrenchStamped xc_yc_msg;
+        geometry_msgs::Vector3 xc_yc_msg;
 
         //get the information from mavros/global_position/local
         double x = poseCbMsg.pose.pose.position.x;
@@ -312,9 +313,9 @@ public:
         ROS_INFO_STREAM("Wx: " << xct << "Wy: " << yct << "Wz: " << zct); 
 
         //test publisher publishing
-        xc_yc_msg.wrench.force.x = xct;
-        xc_yc_msg.wrench.force.y = yct;
-        xc_yc_msg.wrench.force.z = zct;
+        xc_yc_msg.x = xct;
+        xc_yc_msg.y = yct;
+        xc_yc_msg.z = zct;
         xc_yc_pub_.publish(xc_yc_msg);
 
         // output_msg.time_from_start = ros::Duration(time_from_start);
