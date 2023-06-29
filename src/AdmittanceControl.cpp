@@ -351,10 +351,14 @@ public:
         output_msg.pose.position.x = xct;  
         output_msg.pose.position.y = yct;
         output_msg.pose.position.z = z;
+        output_msg.pose.orientation.w = qw;
+        output_msg.pose.orientation.x = qx;
+        output_msg.pose.orientation.y = qy;
+        output_msg.pose.orientation.z = qz;
 
-        updatePose(output_msg);
-        publish();
-        //mod_trajectory_pub_.publish(output_msg); //publishing modified message
+        // updatePose(output_msg);
+        // publish();
+        mod_trajectory_pub_.publish(output_msg); //publishing modified message
 
         //mod_trajectory_pub_.publish(output_msg); //publishing modified message
         pose_received = false;
